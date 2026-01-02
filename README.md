@@ -63,15 +63,11 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 
 ## 🔮 Future Roadmap
 
-This project is evolving into a fully autonomous agentic system. Planned enhancements include:
+This project is evolving into a fully autonomous WhatsApp agentic system. Planned enhancements include:
 
--   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
 -   [ ] **Persistent Memory:** Integration with **SQLite/PostgreSQL** for long-term user history storage.
 -   [ ] **Tool Use (MCP):** Integration of **Model Context Protocol (MCP)** tools to allow the bot to perform external actions (searching the web, querying databases, etc.).
 -   [ ] **User Experience:** Typing indicators and rich media responses.
 -   [ ] **Docker Support:** Containerization for consistent deployment environments (Coming soon).
+-   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
 -   [ ] **Production Deployment:** Migration from local tunneling to a public cloud host (AWS/GCP/Vercel).
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
