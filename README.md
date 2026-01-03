@@ -6,6 +6,7 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 
 - **Advanced LLM Integration:** Powered by Google's **Gemini 2.0 Flash** for fast, high-quality responses.
 - **Stateful Conversations:** Utilizes **LangGraph** to manage conversation state and message history, ensuring the bot remembers context.
+- **Persistent Memory:** Uses **SQLite** checkpoints to save conversation history across sessions (stored in `conversation.db`).
 - **Robust Webhook Handling:** Built on **FastAPI** and **PyWa** for reliable real-time message processing with Meta's WhatsApp Cloud API.
 - **Session Management:** Includes basic session handling (reset context via `/clear` command).
 
@@ -14,6 +15,7 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 - **Framework:** [FastAPI](https://fastapi.tiangolo.com/)
 - **WhatsApp Client:** [PyWa](https://github.com/david-lev/pywa)
 - **LLM Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) & [LangChain](https://www.langchain.com/)
+- **State Management:** SQLite (LangGraph Checkpointer)
 - **Model:** Google Gemini 2.0 Flash (`gemini-2.0-flash`)
 - **Environment Management:** [python-dotenv](https://pypi.org/project/python-dotenv/)
 
@@ -65,9 +67,11 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 
 This project is evolving into a fully autonomous WhatsApp agentic system. Planned enhancements include:
 
--   [ ] **Persistent Memory:** Integration with **SQLite/PostgreSQL** for long-term user history storage.
+-   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
 -   [ ] **Tool Use (MCP):** Integration of **Model Context Protocol (MCP)** tools to allow the bot to perform external actions (searching the web, querying databases, etc.).
 -   [ ] **User Experience:** Typing indicators and rich media responses.
 -   [ ] **Docker Support:** Containerization for consistent deployment environments (Coming soon).
--   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
 -   [ ] **Production Deployment:** Migration from local tunneling to a public cloud host (AWS/GCP/Vercel).
+
+
+
