@@ -63,7 +63,7 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
     ```
     Update your `CALLBACK_URL` in `.env` and the Meta App Dashboard with the new ngrok URL.
 
-## 🔮 Future Roadmap
+##  Future Roadmap
 
 This project is evolving into a fully autonomous WhatsApp agentic system. Planned enhancements include:
 
