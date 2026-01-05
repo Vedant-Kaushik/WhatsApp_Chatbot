@@ -8,7 +8,7 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 - **Stateful Conversations:** Utilizes **LangGraph** to manage conversation state and message history, ensuring the bot remembers context.
 - **Persistent Memory:** Uses **SQLite** checkpoints to save conversation history across sessions (stored in `conversation.db`).
 - **Robust Webhook Handling:** Built on **FastAPI** and **PyWa** for reliable real-time message processing with Meta's WhatsApp Cloud API.
-- **Session Management:** Includes basic session handling (reset context via `/clear` command).
+- **Session Management:** Includes basic session handling (reset context via `clear` command).
 
 ## 🛠️ Tech Stack
 
@@ -18,50 +18,69 @@ An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGr
 - **State Management:** SQLite (LangGraph Checkpointer)
 - **Model:** Google Gemini 2.0 Flash (`gemini-2.0-flash`)
 - **Environment Management:** [python-dotenv](https://pypi.org/project/python-dotenv/)
+- **Deployment:** Docker (containerized), ngrok (local tunneling)
 
 ## ⚙️ Setup & Installation
 
-> [!NOTE]
-> **Current Status:** This setup guide is for **local development** using tunneling (ngrok).
-> **Future Update:** Docker support and public hosting instructions are currently in development. Please wait for the upcoming Docker update for a containerized deployment guide.
+### **Prerequisites**
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
-    cd Whatsapp_chatbot
-    ```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
+   cd Whatsapp_chatbot
+   ```
 
-2.  **Install Dependencies**
-    Ensure you created a virtual environment:
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-    pip install -r requirements.txt
-    ```
-    *(Note: Ensure `uv` or `pip` is used to install `fastapi`, `uvicorn`, `pywa`, `langchain-google-genai`, `langgraph`, `python-dotenv`)*
+2. Create a `.env` file with your credentials:
+   ```env
+   PHONE_ID=your_whatsapp_phone_id
+   WHATSAPP_TOKEN=your_meta_access_token
+   CALLBACK_URL=https://your-tunnel-url.ngrok-free.app
+   VERIFY_TOKEN=your_custom_verify_token
+   APP_ID=your_meta_app_id
+   APP_SECRET=your_meta_app_secret
+   GOOGLE_API_KEY=your_google_gemini_api_key
+   ```
+   > [!IMPORTANT]
+   > Do NOT use quotes around the values in `.env`
 
-3.  **Environment Configuration**
-    Create a `.env` file in the root directory with the following credentials:
-    ```env
-    PHONE_ID="your_whatsapp_phone_id"
-    WHATSAPP_TOKEN="your_meta_access_token"
-    CALLBACK_URL="https://your-tunnel-url.ngrok-free.app"
-    VERIFY_TOKEN="your_custom_verify_token"
-    APP_ID="your_meta_app_id"
-    APP_SECRET="your_meta_app_secret"
-    GOOGLE_API_KEY="your_google_gemini_api_key"
-    ```
+### **Option A: Local Development**
 
-4.  **Run the Server**
-    ```bash
-    uvicorn main:app --host 0.0.0.0 --port 5173 --reload
-    ```
+1. Install dependencies with uv:
+   ```bash
+   pip install uv
+   uv sync
+   ```
 
-5.  **Expose Localhost**
-    ```bash
-    ngrok http 5173
-    ```
-    Update your `CALLBACK_URL` in `.env` and the Meta App Dashboard with the new ngrok URL.
+2. Run the server:
+   ```bash
+   uvicorn main:app --reload --port 5173
+   ```
+
+3. Expose via ngrok:
+   ```bash
+   ngrok http 5173
+   ```
+
+4. Update `CALLBACK_URL` in `.env` with the ngrok URL.
+
+### **Option B: Docker (Recommended)**
+
+1. Build the Docker image:
+   ```bash
+   docker build -t whatsapp_chatbot_v1 .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -p 5173:5173 --env-file .env whatsapp_chatbot_v1
+   ```
+
+3. In a separate terminal, expose via ngrok:
+   ```bash
+   ngrok http 5173
+   ```
+
+4. Update `CALLBACK_URL` in `.env` and restart the container.
 
 ##  Future Roadmap
 
@@ -70,8 +89,8 @@ This project is evolving into a fully autonomous WhatsApp agentic system. Planne
 -   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
 -   [ ] **Tool Use (MCP):** Integration of **Model Context Protocol (MCP)** tools to allow the bot to perform external actions (searching the web, querying databases, etc.).
 -   [ ] **User Experience:** Typing indicators and rich media responses.
--   [ ] **Docker Support:** Containerization for consistent deployment environments (Coming soon).
 -   [ ] **Production Deployment:** Migration from local tunneling to a public cloud host (AWS/GCP/Vercel).
 
+## 🤝 Contributing
 
-
+Contributions are welcome! Please feel free to submit a Pull Request.
