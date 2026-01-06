@@ -1,14 +1,14 @@
-# AI-Powered WhatsApp Chatbot
+# Enterprise-Grade WhatsApp Chatbot
 
-An intelligent, conversational WhatsApp chatbot built with **FastAPI**, **LangGraph**, and **Google Gemini 2.0 Flash**. This project leverages modern AI agent architectures to maintain context-aware conversations and serve as a foundation for advanced future capabilities.
+A premium, intelligent WhatsApp assistant ready to represent your brand. Built with **FastAPI**, **LangGraph**, and **Google Gemini 2.0 Flash**, it delivers context-aware, human-like conversations that feel professional and engaging.
 
-## 🚀 Features
+## 🚀 Why This Bot?
 
-- **Advanced LLM Integration:** Powered by Google's **Gemini 2.0 Flash** for fast, high-quality responses.
-- **Stateful Conversations:** Utilizes **LangGraph** to manage conversation state and message history, ensuring the bot remembers context.
-- **Persistent Memory:** Uses **SQLite** checkpoints to save conversation history across sessions (stored in `conversation.db`).
-- **Robust Webhook Handling:** Built on **FastAPI** and **PyWa** for reliable real-time message processing with Meta's WhatsApp Cloud API.
-- **Session Management:** Includes basic session handling (reset context via `clear` command).
+- **Enterprise Ready:** Deploy a sophisticated AI agent for your company in minutes.
+- **Beautiful Responses:** Designed to send visually stunning, well-formatted messages using WhatsApp's native styling (bold, clean lists, perfectly aligned tables).
+- **Deep Context:** Remembers every detail of the conversation for a seamless user experience.
+- **Instant Intelligence:** Powered by Gemini 2.0 Flash for lightning-fast, accurate answers.
+- **Session Management:** Includes smart context handling (reset via `/clear`).
 
 ## 🛠️ Tech Stack
 
