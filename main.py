@@ -10,6 +10,7 @@ from langgraph.prebuilt import ToolNode
 from typing import TypedDict, Annotated
 import sqlite3
 import os
+import json
 
 load_dotenv()
 conn = sqlite3.connect("conversation.db", check_same_thread=False)
@@ -42,6 +43,9 @@ def delete_thread(thread_id: str):
     conn.commit()
     conn.close() 
 
+with open("prompts.json", "r") as f:
+    data = json.load(f)
+
 @wa.on_message(filters.text)
 def Chatting(_: WhatsApp, msg: types.Message):
 
@@ -49,16 +53,24 @@ def Chatting(_: WhatsApp, msg: types.Message):
     config={"configurable": {"thread_id": thread_id}}
 
     if msg.text == "clear":
-        msg.react("👍")
         delete_thread(thread_id)
-        chat_bot.invoke(
-            {"messages": [SystemMessage(content="you are a helpful assistant working on gemini 3 pro")]},
-            config=config
-        )
+        msg.react("👍")
         return
 
-    initial_state={"messages": [HumanMessage(content=msg.text)]}
-    response = chat_bot.invoke(initial_state,config=config)["messages"][-1].content
+    current_state = chat_bot.get_state(config)
+
+    # in case of "clear" or new chat 
+    if not current_state.values.get("messages"):
+        initial_state = {
+            "messages": [
+                SystemMessage(content=data['system_prompt']),
+                HumanMessage(content=msg.text)
+            ]
+        }
+    else:
+        initial_state = {"messages": [HumanMessage(content=msg.text)]}
+    
+    response = chat_bot.invoke(initial_state, config=config)["messages"][-1].content
 
     msg.reply(response) 
 
@@ -67,7 +79,6 @@ def Chatting(_: WhatsApp, msg: types.Message):
 
 def chatbot(state_chatbot):
     message=state_chatbot['messages']
-    # meesages contains full history 
     response=llm.invoke(message) 
     return {'messages':[response]}
     
@@ -81,7 +92,7 @@ def Chatflow():
 
     graph.add_edge(START,'chatbot')
     graph.add_edge('chatbot',END)
-    # thread id code config define and remove meomor na stor in converation.db
+    
     workflow = graph.compile(checkpointer=chekpointer)
     return workflow
 
