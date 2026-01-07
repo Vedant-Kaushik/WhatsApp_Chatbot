@@ -1,96 +1,105 @@
-# Enterprise-Grade WhatsApp Chatbot
+# Enterprise AI Chatbot for WhatsApp
 
-A premium, intelligent WhatsApp assistant ready to represent your brand. Built with **FastAPI**, **LangGraph**, and **Google Gemini 2.0 Flash**, it delivers context-aware, human-like conversations that feel professional and engaging.
+**The Easiest, Most Powerful Way to Deploy AI on WhatsApp.**
 
-## 🚀 Why This Bot?
+Turn your WhatsApp business number into a 24/7 intelligent agent. Whether you are a developer looking for a robust foundation or a business owner wanting a "done-for-you" solution, this project delivers an enterprise-grade experience instantly.
 
-- **Enterprise Ready:** Deploy a sophisticated AI agent for your company in minutes.
-- **Beautiful Responses:** Designed to send visually stunning, well-formatted messages using WhatsApp's native styling (bold, clean lists, perfectly aligned tables).
-- **Deep Context:** Remembers every detail of the conversation for a seamless user experience.
-- **Instant Intelligence:** Powered by Gemini 2.0 Flash for lightning-fast, accurate answers.
-- **Session Management:** Includes smart context handling (reset via `/clear`).
+## 🚀 Why This Chatbot?
 
-## 🛠️ Tech Stack
+*   **Zero-Friction Setup**: The database initializes automatically on the first run. No complex migrations or SQL scripts needed.
+*   **Human-Like Intelligence**: Powered by a State-of-the-Art Large Language Model (LLM), it understands context, nuance, and intent better than traditional rule-based bots.
+*   **Beautiful Responses**: Sends perfectly formatted messages with bold text, lists, and tables that look professional on mobile and desktop.
+*   **Smart Memory**: Remembers conversation history for seamless follow-ups. Reset memory instantly with our simpler commands.
+*   **Reliable**: Built on a modern, high-concurrency framework.
 
-- **Framework:** [FastAPI](https://fastapi.tiangolo.com/)
-- **WhatsApp Client:** [PyWa](https://github.com/david-lev/pywa)
-- **LLM Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/) & [LangChain](https://www.langchain.com/)
-- **State Management:** SQLite (LangGraph Checkpointer)
-- **Model:** Google Gemini 2.0 Flash (`gemini-2.0-flash`)
-- **Environment Management:** [python-dotenv](https://pypi.org/project/python-dotenv/)
-- **Deployment:** Docker (containerized), ngrok (local tunneling)
+---
 
-## ⚙️ Setup & Installation
+## 🌩️ Hosted Service (No Coding Required)
 
-### **Prerequisites**
+**Don't want to manage servers, Docker, or API keys?**
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
-   cd Whatsapp_chatbot
-   ```
+We offer a fully managed **Premium Cloud Tier** for business owners and non-tech users.
 
-2. Create a `.env` file with your credentials:
-   ```env
-   PHONE_ID=your_whatsapp_phone_id
-   WHATSAPP_TOKEN=your_meta_access_token
-   CALLBACK_URL=https://your-tunnel-url.ngrok-free.app
-   VERIFY_TOKEN=your_custom_verify_token
-   APP_ID=your_meta_app_id
-   APP_SECRET=your_meta_app_secret
-   GOOGLE_API_KEY=your_google_gemini_api_key
-   ```
-   > [!IMPORTANT]
-   > Do NOT use quotes around the values in `.env`
+*   **We Host Everything**: You just scan a QR code or provide your number.
+*   **No Technical Headache**: We handle the technical setup; you handle your customers.
+*   **Cost**: **~$25 USD / month** (Base Hosting).
+*   **Custom Integrations**: connecting the bot to *your* specific database, calendar, or CRM is available as a **premium customization service**.
 
-### **Option A: Local Development**
 
-1. Install dependencies with uv:
-   ```bash
-   pip install uv
-   uv sync
-   ```
+**[Contact us](#)** to get started with the Hosted Tier today.
 
-2. Run the server:
-   ```bash
-   uvicorn main:app --reload --port 5173
-   ```
+---
 
-3. Expose via ngrok:
-   ```bash
-   ngrok http 5173
-   ```
+## 🛠️ For Developers (Self-Hosted)
 
-4. Update `CALLBACK_URL` in `.env` with the ngrok URL.
+If you prefer to run it yourself, this codebase is open-source and developer-friendly.
 
-### **Option B: Docker (Recommended)**
+### Tech Stack
+*   **Framework**: FastAPI (High-performance Python web framework)
+*   **AI Engine**: Advanced LLM (Abstracted via LangChain/LangGraph)
+*   **Database**: SQLite (Auto-created), easily swappable for PostgreSQL
+*   **Integration**: PyWa (Verified WhatsApp APIs)
+*   **Containerization**: Docker & Docker Compose
 
-1. Build the Docker image:
-   ```bash
-   docker build -t whatsapp_chatbot_v1 .
-   ```
+### Fast Setup
 
-2. Run the container:
-   ```bash
-   docker run -p 5173:5173 --env-file .env whatsapp_chatbot_v1
-   ```
+**1. Prerequisites**
+*   Git
+*   Docker (Optional, but recommended)
+*   A Meta Developer Account & WhatsApp Business API credentials
 
-3. In a separate terminal, expose via ngrok:
-   ```bash
-   ngrok http 5173
-   ```
+**2. Clone & Configure**
+```bash
+git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
+cd Whatsapp_chatbot
+```
 
-4. Update `CALLBACK_URL` in `.env` and restart the container.
+Create a `.env` file (do not use quotes):
+```env
+PHONE_ID=your_phone_id
+WHATSAPP_TOKEN=your_token
+CALLBACK_URL=https://your-domain.com
+VERIFY_TOKEN=your_verify_token
+APP_ID=your_app_id
+APP_SECRET=your_app_secret
+GOOGLE_API_KEY=your_ai_api_key
+```
 
-##  Future Roadmap
+**3. Run via Docker**
+```bash
+docker build -t whatsapp-bot .
+docker run -p 5173:5173 --env-file .env whatsapp-bot
+```
+> **Note**: On the first run, the system will **automatically create and initialize the database**. You will see a "Database initialized" message in the logs.
 
-This project is evolving into a fully autonomous WhatsApp agentic system. Planned enhancements include:
+---
 
--   [ ] **Multi-Modal Capabilities:** Support for image and PDF analysis via Gemini's vision capabilities.
--   [ ] **Tool Use (MCP):** Integration of **Model Context Protocol (MCP)** tools to allow the bot to perform external actions (searching the web, querying databases, etc.).
--   [ ] **User Experience:** Typing indicators and rich media responses.
--   [ ] **Production Deployment:** Migration from local tunneling to a public cloud host (AWS/GCP/Vercel).
+## 🔌 API Documentation
 
-## 🤝 Contributing
+### `POST /clear`
+**Description**: Resets the conversation memory for a specific user.
+**Usage**: Useful for testing or when a user wants to start a fresh topic.
+**Payload**:
+```json
+{
+  "user_id": "wa_phone_number"
+}
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
+
+## 🔮 Future Scope & Roadmap
+
+We are constantly learning and exploring new system architectures to make this bot even better.
+
+1.  **Omnichannel Support**:
+    *   Bringing this same intelligent experience to Telegram and other chat apps, keeping WhatsApp as the primary interface.
+
+2.  **Cloud & Scalability Exploration**:
+    *   Investigating Cloud-Native deployments to support more users efficiently.
+    *   Learning system design concepts like distributed queues for handling complex tasks in the background.
+
+3.  **Agentic Capabilities**:
+    *   Allowing the bot to perform real-world actions (web search, data lookup) to be more helpful.
+
+---
