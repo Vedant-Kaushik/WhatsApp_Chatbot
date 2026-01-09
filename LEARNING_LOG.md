@@ -49,15 +49,15 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A[User Uploads Video] -->|Publish Event| B(Topic: VideoUploaded)
+    A["User Uploads Video"] -->|Publish Event| B("Topic: VideoUploaded")
     
-    B -->|Fanout| C[SQS: CompressService]
-    B -->|Fanout| D[SQS: NotifySubscribers]
-    B -->|Fanout| E[SQS: AnalyticsService]
+    B -->|Fanout| C["SQS: CompressService"]
+    B -->|Fanout| D["SQS: NotifySubscribers"]
+    B -->|Fanout| E["SQS: AnalyticsService"]
     
-    C --> F((Worker 1))
-    D --> G((Worker 2))
-    E --> H((Worker 3))
+    C --> F(("Worker 1"))
+    D --> G(("Worker 2"))
+    E --> H(("Worker 3"))
 ```
 
 ### 3. 💾 Database Scaling: Master-Slave
@@ -67,9 +67,9 @@ graph TD
 
 ```mermaid
 graph LR
-    User -->|Write (Insert)| Master[(Primary DB)]
-    User -->|Read (Select)| Slave1[(Read Replica 1)]
-    User -->|Read (Select)| Slave2[(Read Replica 2)]
+    User -->|Write (Insert)| Master[("Primary DB")]
+    User -->|Read (Select)| Slave1[("Read Replica 1")]
+    User -->|Read (Select)| Slave2[("Read Replica 2")]
     
     Master -.->|Async Replication| Slave1
     Master -.->|Async Replication| Slave2
@@ -80,8 +80,8 @@ graph LR
 
 ```mermaid
 graph TD
-    User(User in India) -->|Req to IP: 1.1.1.1| EdgeIN[CDN Server (Mumbai)]
-    User2(User in USA) -->|Req to IP: 1.1.1.1| EdgeUS[CDN Server (New York)]
+    User["User in India"] -->|Req to IP: 1.1.1.1| EdgeIN["CDN Server (Mumbai)"]
+    User2["User in USA"] -->|Req to IP: 1.1.1.1| EdgeUS["CDN Server (New York)"]
 ```
 
 ### 5. ⚡ Serverless (AWS Lambda)
@@ -108,9 +108,9 @@ From "Works on my Machine" to "Works Everywhere".
 
 ```mermaid
 graph LR
-    A[Code] -->|Docker| B(Container Image)
-    B -->|Kubernetes| C{Cluster Brain}
-    C -->|Run| D[Node 1]
-    C -->|Run| E[Node 2]
-    C -->|Run| F[Node 3]
+    A["Code"] -->|Docker| B("Container Image")
+    B -->|Kubernetes| C{"Cluster Brain"}
+    C -->|Run| D["Node 1"]
+    C -->|Run| E["Node 2"]
+    C -->|Run| F["Node 3"]
 ```
