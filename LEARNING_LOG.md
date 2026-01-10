@@ -67,9 +67,9 @@ graph TD
 
 ```mermaid
 graph LR
-    User -->|Write (Insert)| Master[("Primary DB")]
-    User -->|Read (Select)| Slave1[("Read Replica 1")]
-    User -->|Read (Select)| Slave2[("Read Replica 2")]
+    User -->|Write Insert| Master["Primary DB"]
+    User -->|Read Select| Slave1["Read Replica 1"]
+    User -->|Read Select| Slave2["Read Replica 2"]
     
     Master -.->|Async Replication| Slave1
     Master -.->|Async Replication| Slave2
@@ -108,9 +108,53 @@ From "Works on my Machine" to "Works Everywhere".
 
 ```mermaid
 graph LR
-    A["Code"] -->|Docker| B("Container Image")
+    A["Code"] -->|Docker| B["Container Image"]
     B -->|Kubernetes| C{"Cluster Brain"}
     C -->|Run| D["Node 1"]
     C -->|Run| E["Node 2"]
     C -->|Run| F["Node 3"]
+```
+
+---
+
+## 2026-01-10 (Day 3)
+
+**Focus**: Advanced Data Architecture (Event Sourcing & Streaming).
+
+### 1. 📜 Event Sourcing
+**Concept**: Don't store the *State* (Current Balance), store the *Story* (every Transaction).
+
+*   **TRADITIONAL (State-Oriented)**:
+    *   DB Record: `{ "user": "vedant", "balance": 100 }`
+    *   *Problem*: You lose history. How did we get to 100?
+
+*   **EVENT SOURCING**:
+    *   Event 1: `AccountCreated`
+    *   Event 2: `Deposited 50`
+    *   Event 3: `Withdrew 10`
+    *   Event 4: `Deposited 60`
+    *   *State Calculation (Hydration)*: `0 + 50 - 10 + 60 = 100`.
+
+**Hydration**:
+The process of creating the "Current State" by replaying the entire history of events from the beginning.
+
+### 2. 🌊 Event Streaming
+**Concept**: "Event Sourcing is the Database. Event Streaming is the Pipe."
+
+*   **The Processor Sync Problem**: If you have concurrent streams, how do ensure `Deposited 50` happens *before* `Withdrew 10`?
+*   **Solution (Kafka)**:
+    *   **Partitions**: You guarantee that ALL events for "User 123" go to **Partition #1**.
+    *   **Consumer Group**: The processor reads Partition #1 in strict order (FIFO). This solves the synchronization issue.
+
+**Architecture**:
+```mermaid
+graph LR
+    User -->|Action| API[API Service]
+    API -->|Produce Event| Kafka{Apache Kafka}
+    
+    Kafka -->|Stream| Consumer1[Payment Service]
+    Kafka -->|Stream| Consumer2[Fraud Detection]
+    Kafka -->|Stream| Consumer3[Audit Log]
+    
+    Consumer1 -->|Hydrate| DB[(Current State DB)]
 ```
