@@ -30,7 +30,7 @@ Documenting my journey learning Distributed Systems and High-Level Architecture.
 sequenceDiagram
     participant User
     participant OrderService
-    participant Queue
+    participant Queue as SQS Queue
     participant EmailService
 
     User->>OrderService: Place Order
@@ -49,7 +49,7 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    A["User Uploads Video"] -->|Publish Event| B("Topic: VideoUploaded")
+    A["User Uploads to S3 Bucket"] -->|S3 Event| B("SNS Topic: VideoUploaded")
     
     B -->|Fanout| C["SQS: CompressService"]
     B -->|Fanout| D["SQS: NotifySubscribers"]
@@ -80,8 +80,8 @@ graph LR
 
 ```mermaid
 graph TD
-    User["User in India"] -->|Req to IP: 1.1.1.1| EdgeIN["CDN Server (Mumbai)"]
-    User2["User in USA"] -->|Req to IP: 1.1.1.1| EdgeUS["CDN Server (New York)"]
+    User["User in India"] -->|Req to IP: 1.1.1.1| EdgeIN["CloudFront (Mumbai)"]
+    User2["User in USA"] -->|Req to IP: 1.1.1.1| EdgeUS["CloudFront (New York)"]
 ```
 
 ### 5. ⚡ Serverless (AWS Lambda)
@@ -157,4 +157,52 @@ graph LR
     Kafka -->|Stream| Consumer3[Audit Log]
     
     Consumer1 -->|Hydrate| DB[(Current State DB)]
+```
+
+---
+
+## 2026-01-11 (Day 4)
+
+**Focus**: Event Streaming at Scale (Apache Kafka).
+
+### 1. 🚀 Why Kafka? (High Throughput)
+*   **The Problem**: HTTP/REST is 1-to-1 and slow. Standard Queues (SQS) can get overwhelmed.
+*   **The Solution**: Kafka acts as a "Commit Log". It writes to disk sequentially (fast) and allows **Millions of events/sec**.
+*   **Hybrid Model**: It is both a **Queue** (P2P) and **Pub/Sub** (Broadcast).
+
+### 2. 🏗️ Kafka Architecture
+The system is built of 3 main parts (managed by **Zookeeper**):
+
+1.  **Broker**: The Kafka Server (EC2 Instance) that holds data.
+2.  **Topic**: The Category name (e.g., `OrderCreated`, `UserClicked`).
+3.  **Partition**: The "Scaling Unit". A Topic is sliced into Partitions to spread load.
+    *   *Analogy*: Topic = Highway. Partition = Lane.
+
+**Zookeeper**: The "Manager". It tracks which Broker is alive and who is the Leader of a partition.
+
+### 3. 👥 Consumer Groups & Auto-balancing
+**Concept**: How to process a massive topic in parallel?
+*   **Consumer Group**: A team of workers (Microservices).
+*   **Rule**: One Partition can be read by ONLY ONE Consumer in a group.
+*   **Auto-balancing**: If a Consumer crashes, Kafka/Zookeeper automatically re-assigns its partitions to the surviving consumers.
+
+**Architecture Flow**:
+```mermaid
+graph LR
+    prod["Producer (API)"] -->|Writes| Topic["Topic: UserEvents"]
+    
+    subgraph Kafka Cluster [Kafka Cluster (EC2)]
+        direction TB
+        Topic --> P1["Partition 0"]
+        Topic --> P2["Partition 1"]
+        Topic --> P3["Partition 2"]
+    end
+
+    subgraph CG [Consumer Group (Auto-Scaling)]
+        P1 --> C1["Consumer A"]
+        P2 --> C2["Consumer B"]
+        P3 --> C2
+    end
+    
+    ZK["Zookeeper (Manager)"] -.- Kafka Cluster
 ```
