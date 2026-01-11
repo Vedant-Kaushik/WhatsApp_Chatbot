@@ -191,18 +191,18 @@ The system is built of 3 main parts (managed by **Zookeeper**):
 graph LR
     prod["Producer (API)"] -->|Writes| Topic["Topic: UserEvents"]
     
-    subgraph Kafka Cluster [Kafka Cluster (EC2)]
+    subgraph KafkaCluster ["Kafka Cluster (EC2)"]
         direction TB
         Topic --> P1["Partition 0"]
         Topic --> P2["Partition 1"]
         Topic --> P3["Partition 2"]
     end
 
-    subgraph CG [Consumer Group (Auto-Scaling)]
+    subgraph ConsumerGroup ["Consumer Group (Auto-Scaling)"]
         P1 --> C1["Consumer A"]
         P2 --> C2["Consumer B"]
         P3 --> C2
     end
     
-    ZK["Zookeeper (Manager)"] -.- Kafka Cluster
+    ZK["Zookeeper (Manager)"] -.- KafkaCluster
 ```
