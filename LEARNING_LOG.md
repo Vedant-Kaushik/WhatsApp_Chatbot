@@ -214,6 +214,8 @@ graph LR
 **Focus**: CQRS (Command Query Responsibility Segregation) & Advanced Event Sourcing.
 
 ### 1. ⚔️ CQRS: Breaking the Monolith
+![CQRS Command Flow](/Users/vedantkaushik/.gemini/antigravity/brain/20641225-fe15-476d-b415-636c4bc75f39/cqrs_command_flow_1768242450398.png)
+
 **Concept**: In a traditional DB, the same "Table" is used for Reading and Writing. This causes bottlenecks (Locks).
 **Solution**: **Segregate** (Separate) the **Command** (Write) responsibilities from the **Query** (Read) responsibilities.
 
@@ -230,6 +232,8 @@ graph LR
 
 ### 2. 🔄 The Sync Flow (Event Sourcing Integration)
 How do we get data from the *Write DB* (Postgres) to the *Read DB* (Mongo)? **Event Streaming!**
+
+![AWS Integration Flow](/Users/vedantkaushik/.gemini/antigravity/brain/20641225-fe15-476d-b415-636c4bc75f39/cqrs_aws_flow_1768242465655.png)
 
 **The AWS Flow Explained**:
 1.  **User** sends a Command (`Buy Item`).
@@ -263,3 +267,32 @@ graph TD
         QueryAPI -->|Fetch 10ms| ReadDB
     end
 ```
+
+### 3. pro-tips from Today
+**A. ⏳ Eventual Consistency**:
+You figured it out! The "Famous" Eventual Consistency is literally just **The Time spent in the SQS Queue**.
+*   User clicks "Buy".
+*   Postgres says "Saved".
+*   *... 200ms delay in Queue ...*
+*   Mongo says "Updated".
+*   **The "Eventual" part is that 200ms lag.**
+
+**B. 💾 Postgres (Logs) vs Mongo (State)**:
+*   **Postgres (Write Side)**: Stores the **Log** ("User bought item A", "User bought item B"). It has *everything* (History).
+*   **Mongo (Read Side)**: Stores the **Result** ("User owns 2 items"). It is just a specific *View* of the data optimized for speed.
+
+**C. 🌍 fast CDN Updates (Cache Invalidation)**:
+*   **Problem**: You updated the Price in the DB, but the CDN (CloudFront) still shows the old price.
+*   **Flow**:
+    `SNS (PriceChanged) -> Lambda -> CloudFront (Invalidate Cache)`
+*   This triggers the CDN to delete the old file and fetch the new price immediately.
+
+### 4. 🧠 Cache vs Database Decision
+**"Why not put the whole Mongo DB into Cache?"**
+
+1.  **Cost**: Cache (RAM) is expensive. Disk (Mongo) is cheap.
+2.  **Size**: Netflix has Petabytes of videos. You can't fit that in RAM.
+3.  **Data Type Rule**:
+    *   **CDN (CloudFront)**: Use for **Static Files** (Profile Pics, Videos, CSS). Things that don't change often.
+    *   **Cache (Redis)**: Use for **Session Data** or **Hot Data** (Top 10 Leaderboard, Shopping Cart). Things accessed 1000x/sec.
+    *   **NoSQL (Mongo)**: Use for **Structured Data** (User Profiles, Orders, Comments). The "Permanent Record".
