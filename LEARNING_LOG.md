@@ -214,7 +214,7 @@ graph LR
 **Focus**: CQRS (Command Query Responsibility Segregation) & Advanced Event Sourcing.
 
 ### 1. ⚔️ CQRS: Breaking the Monolith
-![CQRS Command Flow](/Users/vedantkaushik/.gemini/antigravity/brain/20641225-fe15-476d-b415-636c4bc75f39/cqrs_command_flow_1768242450398.png)
+![CQRS Command Flow](./assets/cqrs_command_flow.png)
 
 **Concept**: In a traditional DB, the same "Table" is used for Reading and Writing. This causes bottlenecks (Locks).
 **Solution**: **Segregate** (Separate) the **Command** (Write) responsibilities from the **Query** (Read) responsibilities.
@@ -233,7 +233,7 @@ graph LR
 ### 2. 🔄 The Sync Flow (Event Sourcing Integration)
 How do we get data from the *Write DB* (Postgres) to the *Read DB* (Mongo)? **Event Streaming!**
 
-![AWS Integration Flow](/Users/vedantkaushik/.gemini/antigravity/brain/20641225-fe15-476d-b415-636c4bc75f39/cqrs_aws_flow_1768242465655.png)
+![AWS Integration Flow](./assets/cqrs_aws_flow.png)
 
 **The AWS Flow Explained**:
 1.  **User** sends a Command (`Buy Item`).
