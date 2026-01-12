@@ -206,3 +206,60 @@ graph LR
     
     ZK["Zookeeper (Manager)"] -.- KafkaCluster
 ```
+
+---
+
+## 2026-01-12 (Day 5)
+
+**Focus**: CQRS (Command Query Responsibility Segregation) & Advanced Event Sourcing.
+
+### 1. ⚔️ CQRS: Breaking the Monolith
+**Concept**: In a traditional DB, the same "Table" is used for Reading and Writing. This causes bottlenecks (Locks).
+**Solution**: **Segregate** (Separate) the **Command** (Write) responsibilities from the **Query** (Read) responsibilities.
+
+*   **Left Side (Write Model)**:
+    *   **Goal**: Integrity & Speed of Ingestion.
+    *   **Operations**: `POST`, `PUT`, `DELETE` (Create/Update).
+    *   **Database**: **PostgreSQL** (Normalized, Relational).
+    *   **Logic**: "Command Handler" validates the rules.
+*   **Right Side (Read Model)**:
+    *   **Goal**: Fast Retrieval (No complex Joins).
+    *   **Operations**: `GET` (Read).
+    *   **Database**: **MongoDB / DynamoDB** (Denormalized, JSON).
+    *   **Logic**: "Query Handler" just fetches the data.
+
+### 2. 🔄 The Sync Flow (Event Sourcing Integration)
+How do we get data from the *Write DB* (Postgres) to the *Read DB* (Mongo)? **Event Streaming!**
+
+**The AWS Flow Explained**:
+1.  **User** sends a Command (`Buy Item`).
+2.  **Command API** writes to **Postgres** (Write DB).
+3.  **Postgres** (or the Service) publishes an event: `ItemPurchased`.
+4.  **Event Bus (SNS/Kafka)** receives it.
+5.  **Fan-out**: The event goes to a **SQS Queue**.
+6.  **Lambda Trigger**: The SQS Queue triggers a **Lambda Function**.
+7.  **Lambda** updates the **Read DB** (Mongo/Dynamo).
+
+**Visualizing the Architecture**:
+```mermaid
+graph TD
+    User((User))
+    
+    subgraph WriteSide [Command / Write Side]
+        User -->|POST/PUT| CMD_API[Command API]
+        CMD_API -->|Validate| Handler[Command Handler]
+        Handler -->|Insert| WriteDB[(Postgres DB)]
+    end
+    
+    subgraph Sync [Event Bridge]
+        WriteDB -.->|Stream Change| EventBus{Event Bus / SNS}
+        EventBus -->|Fanout| Queue[SQS Queue]
+        Queue -->|Trigger| Lambda[AWS Lambda Processor]
+    end
+    
+    subgraph ReadSide [Query / Read Side]
+        Lambda -->|Update| ReadDB[(MongoDB / DynamoDB)]
+        User -->|GET| QueryAPI[Query API]
+        QueryAPI -->|Fetch 10ms| ReadDB
+    end
+```
