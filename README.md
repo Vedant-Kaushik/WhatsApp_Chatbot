@@ -88,7 +88,7 @@ docker run -p 5173:5173 --env-file .env whatsapp-bot
 
 ---
 
-## 🔮 Future Scope & Roadmap
+##  Future Scope & Roadmap
 
 We are constantly learning and exploring new system architectures to make this bot even better.
 
