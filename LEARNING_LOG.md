@@ -296,3 +296,45 @@ You figured it out! The "Famous" Eventual Consistency is literally just **The Ti
     *   **CDN (CloudFront)**: Use for **Static Files** (Profile Pics, Videos, CSS). Things that don't change often.
     *   **Cache (Redis)**: Use for **Session Data** or **Hot Data** (Top 10 Leaderboard, Shopping Cart). Things accessed 1000x/sec.
     *   **NoSQL (Mongo)**: Use for **Structured Data** (User Profiles, Orders, Comments). The "Permanent Record".
+
+---
+
+## 2026-01-15 (Day 7)
+
+**Focus**: Back-of-the-Envelope Calculations (Estimations).
+
+### 1. 🧮 Why Estimate?
+In System Design, you don't need exact numbers (`99,872`), you need **Orders of Magnitude**.
+*   **Goal**: To decide if you need **1 server** or **1000 servers**.
+*   **Method**: Approximations & specific "Powers of 2".
+
+### 2. 🐦 Example: Twitter (X) Scale Estimation
+**Scenario**: "Design the storage for Twitter."
+
+**A. Assumptions** (Write these down first!):
+*   **DAU (Daily Active Users)**: 150 Million (50% of 300M total).
+*   **Tweets/Day**: 2 per user.
+*   **Media**: 10% of tweets have images/video (Avg size 1MB).
+*   **Retention**: Store data for 5 years.
+
+**B. The Math (QPS & Storage)**:
+
+| Metric | Calculation | Result |
+| :--- | :--- | :--- |
+| **Total Daily Tweets** | `150M Users * 2 Tweets` | **300 Million** |
+| **QPS (Avg)** | `300M / 86,400 sec` | **~3,500 QPS** |
+| **QPS (Peak)** | `2 * Avg` | **~7,000 QPS** |
+| **Daily Media Storage** | `300M * 10% * 1MB` | **30 TB / Day** |
+| **5-Year Storage** | `30 TB * 365 * 5` | **~55 PB (Petabytes)** |
+
+### 3. 🧠 Pro-Tips for Interviews
+1.  **Round Numbers**: Don't do `99987 / 9.1`. Do `100,000 / 10`. Speed > Precision.
+2.  **Label Units**: Always write `MB`, `GB`, `PB`. Don't just write "5".
+    *   *Confusing*: "We need 50 storage."
+    *   *Clear*: "We need 50 **TB** of storage."
+3.  **The "Power of 2" Cheat Sheet**:
+    *   $2^{10}$ $\approx$ 1 KB (Thousand)
+    *   $2^{20}$ $\approx$ 1 MB (Million)
+    *   $2^{30}$ $\approx$ 1 GB (Billion)
+    *   $2^{40}$ $\approx$ 1 TB (Trillion)
+
