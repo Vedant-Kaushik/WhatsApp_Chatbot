@@ -288,7 +288,7 @@ You figured it out! The "Famous" Eventual Consistency is literally just **The Ti
 *   This triggers the CDN to delete the old file and fetch the new price immediately.
 
 ### 4. 🧠 Cache vs Database Decision
-**"Why not put the whole Mongo DB into Cache?"**
+**"Why not put the whole MongoDB into Cache?"**
 
 1.  **Cost**: Cache (RAM) is expensive. Disk (Mongo) is cheap.
 2.  **Size**: Netflix has Petabytes of videos. You can't fit that in RAM.
