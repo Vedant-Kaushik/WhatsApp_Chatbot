@@ -480,3 +480,137 @@ Estimated Requests = (Previous_Window × Remaining%) + (Current_Window × Elapse
 **Recommendation**: Use **Sliding Window Counter** for most production systems. It balances accuracy, memory, and burst tolerance.
 
 
+---
+
+## 2026-01-18 (Day 8)
+
+**Focus**: Consistent Hashing.
+
+### 1. 🔢 What is Hashing?
+**Basic Concept**: A hash function takes input data and returns a fixed-size number (hash value).
+
+**Simple Example**:
+```python
+def simple_hash(key):
+    # Convert string to hash value
+    return hash(key)
+
+# Traditional approach (The Problem)
+def get_server_index(key, num_servers):
+    return simple_hash(key) % num_servers
+
+# Example:
+print(get_server_index("user123", 4))  # Output: 2 (server 2)
+```
+
+**The Rehashing Problem**:
+![Rehashing Problem](./assets/rehashing_problem.png)
+
+*   With **4 servers**: `hash("key0") % 4 = 1` → Server 1
+*   **Server 1 goes offline** (now 3 servers): `hash("key0") % 3 = 0` → Server 0
+*   **Problem**: Almost **ALL keys** get remapped to different servers → **Cache Miss Storm**
+
+---
+
+### 2. 🔄 Consistent Hashing: The Solution
+![Hash Ring Basic](./assets/hash_ring_basic.png)
+
+**Key Idea**: Instead of `hash % N`, we use a **Hash Ring** (0 to 2^160-1).
+
+**How it works**:
+1.  **Hash Ring**: Imagine a clock face (0 to 2^160-1), bent into a circle.
+2.  **Place Servers**: Hash each server's IP/name onto the ring.
+3.  **Place Keys**: Hash each key onto the ring.
+4.  **Lookup Rule**: Go **clockwise** from the key until you find a server.
+
+**Example**:
+```
+Ring positions (simplified 0-12):
+- Server 0 at position 3
+- Server 1 at position 7
+- Server 2 at position 11
+
+Key "user123" hashes to position 5
+→ Go clockwise → First server found: Server 1 (at position 7)
+→ Store "user123" on Server 1
+```
+
+**Benefit**: When Server 1 is removed, only keys **between Server 0 and Server 1** need to be moved to Server 2. Other keys stay put!
+
+---
+
+### 3. ⚠️ Problem 1: Uneven Distribution
+**The Issue**: If servers are placed close together on the ring (e.g., Server 1 at position 10, Server 2 at position 11), Server 2 gets almost no keys.
+
+**Example**:
+```
+Server 0 at position 3
+Server 1 at position 10
+Server 2 at position 11
+→ Server 2's partition is tiny (11 to 3)
+→ Server 0's partition is huge (3 to 10)
+```
+
+---
+
+### 4. 🎯 Solution: Virtual Nodes
+![Virtual Nodes](./assets/virtual_nodes.png)
+
+**Concept**: Instead of placing each server **once** on the ring, place it **multiple times** (e.g., 150 virtual nodes per server).
+
+**How it works**:
+```python
+def get_virtual_node_positions(server_name, num_virtual_nodes=150):
+    positions = []
+    for i in range(num_virtual_nodes):
+        virtual_name = f"{server_name}#{i}"
+        positions.append(hash(virtual_name))
+    return positions
+
+# Example:
+# Server 0 → s0#0, s0#1, s0#2, ..., s0#149 (150 positions on ring)
+# Server 1 → s1#0, s1#1, s1#2, ..., s1#149 (150 positions on ring)
+```
+
+**Benefit**:
+*   **Even Distribution**: With 150-200 virtual nodes, keys are distributed evenly (standard deviation < 10%).
+*   **Smooth Scaling**: Adding/removing a server redistributes load across **all** remaining servers, not just neighbors.
+
+---
+
+### 5. 🌟 Problem 2: Celebrity Problem (Hotspot Keys)
+**The Issue**: If all celebrity data (e.g., "Katy Perry", "Justin Bieber") hashes to the **same server**, that server gets overwhelmed.
+
+**Partial Solution (Virtual Nodes)**:
+*   Virtual nodes help **spread** the load, but if a **single key** (e.g., "Katy Perry's profile") is accessed 1 million times/sec, it still hits one server.
+
+**Full Solution** (Beyond Consistent Hashing):
+*   **Caching Layer** (Redis) in front of the database.
+*   **Replication**: Store hot keys on multiple servers.
+*   **Sharding by Access Pattern**: Use a different hash function for celebrity keys.
+
+---
+
+### 6. 🏆 Real-World Usage
+Consistent Hashing is used in:
+*   **Amazon DynamoDB** (data partitioning)
+*   **Apache Cassandra** (cluster distribution)
+*   **Discord** (chat sharding)
+*   **Akamai CDN** (content routing)
+*   **Google Maglev** (load balancing)
+
+---
+
+### 7. 📊 Summary Table
+| Aspect | Traditional Hashing | Consistent Hashing |
+| :--- | :--- | :--- |
+| **Formula** | `hash(key) % N` | `hash(key)` on ring, go clockwise |
+| **Keys Moved (Add Server)** | ~100% | ~1/N (minimal) |
+| **Keys Moved (Remove Server)** | ~100% | ~1/N (minimal) |
+| **Distribution** | Even (if N is fixed) | Uneven (without virtual nodes) |
+| **Virtual Nodes** | N/A | Solves uneven distribution |
+| **Use Case** | Static server pools | Dynamic scaling (cloud) |
+
+**Key Takeaway**: Consistent Hashing minimizes data movement when servers are added/removed, making it ideal for distributed systems.
+
+
