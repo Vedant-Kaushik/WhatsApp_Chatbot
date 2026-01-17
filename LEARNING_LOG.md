@@ -288,7 +288,7 @@ You figured it out! The "Famous" Eventual Consistency is literally just **The Ti
 *   This triggers the CDN to delete the old file and fetch the new price immediately.
 
 ### 4. 🧠 Cache vs Database Decision
-**"Why not put the whole Mongo DB into Cache?"**
+**"Why not put the whole MongoDB into Cache?"**
 
 1.  **Cost**: Cache (RAM) is expensive. Disk (Mongo) is cheap.
 2.  **Size**: Netflix has Petabytes of videos. You can't fit that in RAM.
@@ -337,4 +337,146 @@ In System Design, you don't need exact numbers (`99,872`), you need **Orders of 
     *   $2^{20}$ $\approx$ 1 MB (Million)
     *   $2^{30}$ $\approx$ 1 GB (Billion)
     *   $2^{40}$ $\approx$ 1 TB (Trillion)
+
+---
+
+## 2026-01-17 (Day 7)
+
+**Focus**: Rate Limiting Algorithms.
+
+### 1. 🚧 What is Rate Limiting?
+**Concept**: A "Wall" that controls the flow of requests to prevent system overload.
+*   **Goal**: Protect servers from being overwhelmed by too many requests (DDoS, abuse, or traffic spikes).
+*   **HTTP Status**: Returns **429 Too Many Requests** when limit is exceeded.
+
+### 2. 🪣 Algorithm 1: Token Bucket
+![Token Bucket](./assets/token_bucket.png)
+
+**How it works**:
+*   A bucket holds **tokens** (permissions to make requests).
+*   Tokens are **refilled** at a fixed rate (e.g., 10 tokens/second).
+*   Each request **consumes 1 token**.
+*   If no tokens available → Request is **rejected (429)**.
+
+**Pros**:
+*   ✅ Allows **burst traffic** (if bucket has accumulated tokens).
+*   ✅ Simple to implement.
+
+**Cons**:
+*   ❌ Can be **memory-intensive** (need to track tokens per user).
+
+**Use Case**: **API Rate Limiting** (e.g., "100 requests per minute per user").
+
+---
+
+### 3. 💧 Algorithm 2: Leaky Bucket
+![Leaky Bucket](./assets/leaky_bucket.png)
+
+**How it works**:
+*   Requests enter a **queue** (bucket).
+*   Requests **leak out** (are processed) at a **constant rate** (e.g., 5 requests/second).
+*   If queue is full → New requests are **dropped**.
+
+**Pros**:
+*   ✅ **Smooths traffic** (constant outgoing rate, no bursts).
+*   ✅ Good for **network traffic shaping**.
+
+**Cons**:
+*   ❌ **No burst tolerance** (even if system is idle, rate stays constant).
+*   ❌ Older requests might get **stale** in the queue.
+
+**Use Case**: **Network Packet Scheduling** (ensuring steady bandwidth usage).
+
+---
+
+### 4. 🪟 Algorithm 3: Fixed Window Counter
+![Fixed Window Bug](./assets/FixedWindowCounterBug.png)
+
+**How it works**:
+*   Divide time into **fixed windows** (e.g., 1-minute windows).
+*   Count requests in each window.
+*   Reset counter at the start of each new window.
+
+**The Bug** (Burst at Boundaries):
+*   **Window 1 (11:00:00 - 11:00:59)**: 100 requests at 11:00:58 ✅
+*   **Window 2 (11:01:00 - 11:01:59)**: 100 requests at 11:01:01 ✅
+*   **Problem**: 200 requests in **2 seconds** (11:00:58 to 11:01:01), but both windows say "OK".
+
+**Pros**:
+*   ✅ **Very simple** to implement.
+*   ✅ Low memory usage.
+
+**Cons**:
+*   ❌ **Burst traffic** at window boundaries.
+
+**Use Case**: **Basic rate limiting** where precision isn't critical.
+
+---
+
+### 5. 📜 Algorithm 4: Sliding Window Log
+**How it works**:
+*   Keep a **log** (timestamp) of every request.
+*   When a new request arrives, **slide the window** (e.g., last 60 seconds).
+*   Count requests in the sliding window.
+*   **Delete old logs** outside the window.
+
+**Pros**:
+*   ✅ **Accurate** (no boundary burst issue).
+
+**Cons**:
+*   ❌ **Memory-intensive** (stores every request timestamp).
+
+**Use Case**: **High-precision rate limiting** (e.g., financial APIs).
+
+---
+
+### 6. 🎯 Algorithm 5: Sliding Window Counter (Hybrid)
+![Sliding Window Counter](./assets/SlidingWindowCounter(Simplified).png)
+
+**How it works** (Best of Both Worlds):
+*   Combines **Fixed Window** (low memory) + **Sliding Window** (accuracy).
+*   Uses **weighted average** of previous and current window.
+
+**Step-by-Step Example:**
+
+Imagine it's **11:00:30** (you're 30 seconds = 50% into the current minute):
+1. **Previous Window** (10:59:00 - 10:59:59): Had **150 requests**
+2. **Current Window** (11:00:00 - 11:00:59): Has **40 requests** so far
+3. **Your Position**: 50% into current window
+
+**The Formula:**
+```
+Estimated Requests = (Previous_Window × Remaining%) + (Current_Window × Elapsed%)
+                   = (150 × 50%) + (40 × 50%)
+                   = 75 + 20
+                   = 95 requests in the last 60 seconds
+```
+
+**Why the percentages?**
+- If you're **10% into** current window → count **90% of previous** + **10% of current**
+- If you're **80% into** current window → count **20% of previous** + **80% of current**
+- This approximates a true "rolling window" without storing every timestamp!
+
+**Pros**:
+*   ✅ **Accurate** (solves boundary burst).
+*   ✅ **Memory-efficient** (only stores 2 counters).
+
+**Cons**:
+*   ❌ Slightly more complex logic.
+
+**Use Case**: **Production-grade rate limiting** (e.g., AWS API Gateway, Cloudflare).
+
+---
+
+### 7. 🏆 Which One to Use?
+| Algorithm | Accuracy | Memory | Burst Support | Best For |
+| :--- | :---: | :---: | :---: | :--- |
+| **Token Bucket** | Medium | Medium | ✅ Yes | **API Rate Limiting** |
+| **Leaky Bucket** | High | Medium | ❌ No | **Network Traffic Shaping** |
+| **Fixed Window** | Low | Low | ❌ Boundary Bug | **Simple Counters** |
+| **Sliding Log** | Very High | High | ✅ Yes | **Financial/Critical APIs** |
+| **Sliding Counter** | High | Low | ✅ Yes | **🥇 Most Versatile (Recommended)** |
+
+**Recommendation**: Use **Sliding Window Counter** for most production systems. It balances accuracy, memory, and burst tolerance.
+
 
