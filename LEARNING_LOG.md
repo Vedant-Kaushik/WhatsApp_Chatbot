@@ -591,7 +591,7 @@ def get_virtual_node_positions(server_name, num_virtual_nodes=150):
 
 ---
 
-### 6. 🏆 Real-World Usage
+### 6.  Real-World Usage
 Consistent Hashing is used in:
 *   **Amazon DynamoDB** (data partitioning)
 *   **Apache Cassandra** (cluster distribution)
