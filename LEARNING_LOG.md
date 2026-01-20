@@ -578,7 +578,7 @@ def get_virtual_node_positions(server_name, num_virtual_nodes=150):
 
 ---
 
-### 5. 🌟 Problem 2: Celebrity Problem (Hotspot Keys)
+### 5.  Problem 2: Celebrity Problem (Hotspot Keys)
 **The Issue**: If all celebrity data (e.g., "Katy Perry", "Justin Bieber") hashes to the **same server**, that server gets overwhelmed.
 
 **Partial Solution (Virtual Nodes)**:
