@@ -620,33 +620,44 @@ Consistent Hashing is used in:
 
 **Focus**: Video Streaming Engineering.
 
-### 1. 📺 The Evolution of Streaming
-**Old School: RTMP & RTSP**
-*   **RTMP (Real-Time Messaging Protocol)**: By Adobe.
-*   **RTSP (Real-Time Streaming Protocol)**: By RealNetworks.
-*   **Pros**: Low latency (good for live chats).
-*   **Cons**: Requires persistent connection (stateful), hard to scale, poor compatibility with modern browsers (Flash is dead).
+### 1. 📺 The Evolution of Streaming: "Why did we change?"
 
-**The Shift: Progressive Download / HTTP**
-*   Download the full video file (`.mp4`) via HTTP.
-*   **Problem**: Wastes bandwidth if user stops watching; no quality switching.
+**Phase 1: The Early Days (RTMP & RTSP)**
+*   **Protocols**: RTMP (Adobe Flash) & RTSP (Real Networks).
+*   **The Vibe**: Great for low latency (fast!).
+*   **The Problem**:
+    *   Requires authorized/persistent connections.
+    *   Hard to scale.
+    *   **Flash died**, and modern browsers stopped supporting these well.
+
+**Phase 2: The "WWW" Era (Progressive Download)**
+*   **Concept**: Just put a video file (`.mp4`) on a server and let users download it via HTTP.
+*   **The Flow**: Server sends the file -> Client downloads & plays.
+*   **The Major Flaw**:
+    *   **"The Waste"**: If I watch 1 minute of a 2-hour movie and quite, I might have already downloaded 30 minutes. **Waste of data & bandwidth!**
+    *   **"One Size Fits None"**: A user on a **Watch** and a user on a **4K TV** get the *same* file. TV user is sad (low res), Watch user is sad (wasted data).
 
 ---
 
-### 2. 🌊 Adaptive Bitrate Streaming (ABR)
-**The Modern Solution**: Adjust video quality **dynamically** based on user's internet speed and device.
+### 2. 🌊 Enter: Adaptive Bitrate Streaming (ABR)
+**The "Aha!" Moment**:
+*   Instead of the server forcing one file, **let the client choose**.
+*   **Scenario**:
+    *   **User A (Phone, poor 3G)**: "I can only handle 240p right now." -> Server says "Okay, here are 240p chunks."
+    *   **User B (TV, fast Fiber)**: "I want 4K!" -> Server says "Sure, here are 4K chunks."
+    *   **User A moves to WiFi**: "Hey, I can handle 1080p now!" -> Server switches to 1080p chunks instantly.
+
+**Result**: **Both clients get satisfied.** The stream *adapts* to their network speed and device capabilities dynamically.
 
 ![Adaptive Bitrate Streaming](./assets/adaptive_bitrate_streaming.png)
 
 **How it Works (The Pipeline)**:
-1.  **Source Video**: 4K raw file uploaded to server.
-2.  **Transcoding**: Server breaks video into small **Segments** (chunks of 2-10 seconds) at multiple qualities (360p, 720p, 1080p).
-3.  **Manifest File**: An "index" file (`.m3u8` or `.mpd`) lists all available segments and bitrates.
-4.  **Client (Player)**:
-    *   Downloads Manifest.
-    *   Checks network speed.
-    *   Fetches the *best possible segment* for that moment.
-    *   **Result**: Smooth playback (starts at 360p, jumps to 1080p when buffer is safe).
+1.  **Source Video**: 4K raw file uploaded.
+2.  **Transcoding (The Break Down)**: We don't just keep one file. We create:
+    *   **Segments**: Chop the video into tiny pieces (2-10 seconds).
+    *   **Variants**: Create these pieces for *every* quality (240p, 360p, 720p, etc.).
+3.  **Manifest File (The Menu)**: An index file (`.m3u8` or `.mpd`) that tells the player: *"Here are all the qualities available and where to find their chunks."*
+4.  **Client Logic**: The player reads the manifest, checks its own internet speed, and asks for the best possible chunk every few seconds.
 
 ---
 
