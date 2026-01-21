@@ -693,5 +693,20 @@ https://ik.imagekit.io/demo/sample-video.mp4/ik-master.mpd?tr=sr-240_360_480_720
 **Key Note**:
 *   The first request might return `202 Processing` while it generates segments in the background.
 *   Once done, it returns `200 OK` with the streaming manifest.
+*   **Giant Platforms (Netflix, YouTube, Twitch)**: They don't use magic; they use **in-house systems built on top of these open standards** (HLS & MPEG-DASH). They just have massive custom CDNs and optimizations on top.
+
+**Example Manifest File (`master.m3u8`)**:
+```m3u8
+#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=300000,RESOLUTION=426x240
+240p.m3u8
+
+#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360
+360p.m3u8
+
+#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720
+720p.m3u8
+```
+*(This tells the player: "If you have 300kbps speed, play `240p.m3u8`; if you have 2.5Mbps, play `720p.m3u8`.")*
 
 
