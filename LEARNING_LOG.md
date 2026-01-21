@@ -614,3 +614,73 @@ Consistent Hashing is used in:
 **Key Takeaway**: Consistent Hashing minimizes data movement when servers are added/removed, making it ideal for distributed systems.
 
 
+---
+
+## 2026-01-21 (Day 9)
+
+**Focus**: Video Streaming Engineering.
+
+### 1. 📺 The Evolution of Streaming
+**Old School: RTMP & RTSP**
+*   **RTMP (Real-Time Messaging Protocol)**: By Adobe.
+*   **RTSP (Real-Time Streaming Protocol)**: By RealNetworks.
+*   **Pros**: Low latency (good for live chats).
+*   **Cons**: Requires persistent connection (stateful), hard to scale, poor compatibility with modern browsers (Flash is dead).
+
+**The Shift: Progressive Download / HTTP**
+*   Download the full video file (`.mp4`) via HTTP.
+*   **Problem**: Wastes bandwidth if user stops watching; no quality switching.
+
+---
+
+### 2. 🌊 Adaptive Bitrate Streaming (ABR)
+**The Modern Solution**: Adjust video quality **dynamically** based on user's internet speed and device.
+
+![Adaptive Bitrate Streaming](./assets/adaptive_bitrate_streaming.png)
+
+**How it Works (The Pipeline)**:
+1.  **Source Video**: 4K raw file uploaded to server.
+2.  **Transcoding**: Server breaks video into small **Segments** (chunks of 2-10 seconds) at multiple qualities (360p, 720p, 1080p).
+3.  **Manifest File**: An "index" file (`.m3u8` or `.mpd`) lists all available segments and bitrates.
+4.  **Client (Player)**:
+    *   Downloads Manifest.
+    *   Checks network speed.
+    *   Fetches the *best possible segment* for that moment.
+    *   **Result**: Smooth playback (starts at 360p, jumps to 1080p when buffer is safe).
+
+---
+
+### 3. 📜 Protocols: HLS vs DASH
+| Feature | **HLS (HTTP Live Streaming)** | **MPEG-DASH (Dynamic Adaptive Streaming over HTTP)** |
+| :--- | :--- | :--- |
+| **Creator** | Apple | International Standard (MPEG) |
+| **Manifest File** | `.m3u8` | `.mpd` (Media Presentation Description) |
+| **Codec** | H.264, H.265 | Codec Agnostic (H.264, VP9, AV1) |
+| **Compatibility** | Native on iOS/Mac, widely supported | Native on Android/Windows, widely supported |
+| **Usage** | Dominant standard today | Widely used open alternative |
+
+---
+
+### 4. 🛠️ Practical Implementation (ImageKit Example)
+Instead of building a transcoder from scratch (using FFmpeg), we can use a service like **ImageKit**.
+
+**The Process**:
+1.  Upload Master Video (`source.mp4`).
+2.  Request the **Manifest URL** with transformation parameters.
+
+**HLS Example (`.m3u8`)**:
+```
+https://ik.imagekit.io/demo/sample-video.mp4/ik-master.m3u8?tr=sr-240_360_480_720_1080
+```
+*   `tr=sr-...`: Tells ImageKit to generate segments for 240p, 360p, 480p, 720p, and 1080p.
+
+**MPEG-DASH Example (`.mpd`)**:
+```
+https://ik.imagekit.io/demo/sample-video.mp4/ik-master.mpd?tr=sr-240_360_480_720_1080
+```
+
+**Key Note**:
+*   The first request might return `202 Processing` while it generates segments in the background.
+*   Once done, it returns `200 OK` with the streaming manifest.
+
+
