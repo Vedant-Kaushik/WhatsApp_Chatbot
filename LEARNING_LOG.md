@@ -710,3 +710,55 @@ https://ik.imagekit.io/demo/sample-video.mp4/ik-master.mpd?tr=sr-240_360_480_720
 *(This tells the player: "If you have 300kbps speed, play `240p.m3u8`; if you have 2.5Mbps, play `720p.m3u8`.")*
 
 
+---
+
+## 2026-01-22 (Day 10)
+
+**Focus**: UPI Architecture (Unified Payments Interface).
+
+### 1. 🏦 The Problem: "Too Much Information"
+**Old World (IMPS, NEFT, RTGS)**:
+*   To send money, you needed: **Account Number + IFSC Code + Bank Name + Branch Name**.
+*   It was complex, slow, and scary (make a typo -> money gone).
+*   **The Need**: A unified, simple way to send money using just an ID (like an email).
+
+### 2. 🚀 The Solution: UPI
+**Concept**: A real-time payment system that instantly transfers funds between two bank accounts via a mobile platform.
+*   **VPA (Virtual Payment Address)**: Your unique ID (e.g., `username@upi_handle`, `9876543210@ybl`). No need to share bank details!
+*   **2FA**: M-PIN (Mobile PIN) is the secret key.
+
+---
+
+### 3. 🎭 The Participants (Who's involved?)
+It's not just "App to App". It's a 4-party model orchestrated by a central body.
+
+1.  **PSP (Payment Service Provider)**: The App you use (GPay, PhonePe, Paytm). They are just the *interface*. They don't hold money.
+2.  **NPCI (National Payments Corporation of India)**: The **God Mode / Black Box**.
+    *   It's a non-profit specialized division of RBI.
+    *   It sits in the middle of *every* transaction.
+    *   It maintains the "Mapper" (Who is `bob@ybl`? -> It's Bob -> His account is in HDFC).
+3.  **Remitter Bank (Sender's Bank)**: The bank where money *leaves* (e.g., SBI).
+4.  **Beneficiary Bank (Receiver's Bank)**: The bank where money *lands* (e.g., HDFC).
+
+---
+
+### 4. 🔄 The Transaction Flow (Behind the Curtain)
+When Alice (SBI) sends ₹1000 to Bob (HDFC) using GPay:
+
+![UPI Transaction Flow](./assets/upi_transaction_flow.png)
+
+**Step-by-Step**:
+1.  **Initiate**: Alice enters `bob@ybl` on **GPay** (PSP) and enters ₹1000.
+2.  **Address Resolution**: GPay asks **NPCI**: "Who is `bob@ybl`?" -> NPCI checks Mapper -> "It's Bob, HDFC Bank".
+3.  **Auth**: Alice enters her **UPI PIN**.
+4.  **Debit Request**: GPay sends request to **NPCI** -> NPCI forwards to **SBI** (Sender Bank).
+5.  **Debit**: SBI verifies PIN & Balance -> Debits ₹1000 -> Confirms to **NPCI**.
+6.  **Credit Request**: **NPCI** tells **HDFC** (Receiver Bank) -> "Receive ₹1000 for Bob".
+7.  **Credit**: HDFC Credits ₹1000 to Bob -> Confirms to **NPCI**.
+8.  **Success**: **NPCI** tells GPay (and Bob's PSP) -> "Success!" ✅
+
+**Key Takeaway**:
+*   The money **NEVER** touches GPay or PhonePe. It moves directly Bank <-> Bank via the NPCI switch.
+*   MPIN is validated at the **Bank Level**, not the App level.
+
+
