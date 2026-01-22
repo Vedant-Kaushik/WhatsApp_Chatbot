@@ -661,7 +661,7 @@ Consistent Hashing is used in:
 
 ---
 
-### 3. 📜 Protocols: HLS vs DASH
+### 3.  Protocols: HLS vs DASH
 | Feature | **HLS (HTTP Live Streaming)** | **MPEG-DASH (Dynamic Adaptive Streaming over HTTP)** |
 | :--- | :--- | :--- |
 | **Creator** | Apple | International Standard (MPEG) |
