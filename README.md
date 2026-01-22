@@ -48,7 +48,27 @@ If you prefer to run it yourself, this codebase is open-source and developer-fri
 *   Docker (Optional, but recommended)
 *   A Meta Developer Account & WhatsApp Business API credentials
 
-**2. Clone & Configure**
+**2. Get Credentials**
+You need to fill the `.env` file with secrets from Meta and Google.
+
+*   **Meta/Facebook Developers**:
+    1.  Go to [Meta Developers](https://developers.facebook.com/).
+    2.  Create an App -> Select **Other** -> **Business** -> **WhatsApp**.
+    3.  **API Setup**: In the sidebar, go to **WhatsApp > API Setup**.
+        *   Copy **Phone Number ID** (`PHONE_ID`).
+        *   Copy **Temporary Access Token** (or configure a System User for permanent access) (`WHATSAPP_TOKEN`).
+    4.  **App Basic Settings**: Go to **App Settings > Basic**.
+        *   Copy **App ID** (`APP_ID`) and **App Secret** (`APP_SECRET`).
+    5.  **Webhook**: Go to **WhatsApp > Configuration**.
+        *   Edit Webhook.
+        *   **Callback URL**: Your ngrok URL + `/webhook/meta` (e.g., `https://xyz.ngrok-free.app/webhook/meta`).
+        *   **Verify Token**: Create a random string (e.g., `xyzxyz`). This goes into `VERIFY_TOKEN`.
+    
+*   **Google AI**:
+    1.  Get your API Key from [Google AI Studio](https://aistudio.google.com/).
+    2.  This goes into `GOOGLE_API_KEY`.
+
+**3. Clone & Configure**
 ```bash
 git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
 cd Whatsapp_chatbot
@@ -65,12 +85,28 @@ APP_SECRET=your_app_secret
 GOOGLE_API_KEY=your_ai_api_key
 ```
 
-**3. Run via Docker**
+**4. Run via Docker**
 ```bash
 docker build -t whatsapp-bot .
 docker run -p 5173:5173 --env-file .env whatsapp-bot
+
+# In a separate terminal, start ngrok
+ngrok http 5173
 ```
 > **Note**: On the first run, the system will **automatically create and initialize the database**. You will see a "Database initialized" message in the logs.
+
+**5. Run Locally (No Docker)**
+If you have Python installed and want to run it natively:
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server (Port 5173)
+uvicorn main:app --reload --port 5173
+
+# In a separate terminal, start ngrok
+ngrok http 5173
+```
 
 ---
 
