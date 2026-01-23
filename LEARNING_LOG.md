@@ -734,7 +734,7 @@ https://ik.imagekit.io/demo/sample-video.mp4/ik-master.mpd?tr=sr-240_360_480_720
 
 ---
 
-### 3. ⚡ How It Works: "Transferring Intent"
+### 3.  How It Works: "Transferring Intent"
 Unlike traditional methods where you transfer "money" directly with heavy details, in UPI we transfer **Intent**.
 
 **The Intent Block**:
