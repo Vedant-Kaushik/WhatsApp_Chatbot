@@ -9,6 +9,7 @@ Turn your WhatsApp business number into a 24/7 intelligent agent. Whether you ar
 *   **Zero-Friction Setup**: The database initializes automatically on the first run. No complex migrations or SQL scripts needed.
 *   **Human-Like Intelligence**: Powered by a State-of-the-Art Large Language Model (LLM), it understands context, nuance, and intent better than traditional rule-based bots.
 *   **Beautiful Responses**: Sends perfectly formatted messages with bold text, lists, and tables that look professional on mobile and desktop.
+*   **PDF Document Analysis**: Send any PDF to the bot, and it will instantly read, understand, and answer questions based on its content.
 *   **Smart Memory**: Remembers conversation history for seamless follow-ups. Reset memory instantly with our simpler commands.
 *   **Reliable**: Built on a modern, high-concurrency framework.
 
