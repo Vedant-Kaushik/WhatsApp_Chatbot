@@ -4,10 +4,8 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI,GoogleGenerativeAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.runnables import RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph.message import add_messages
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START,END
@@ -57,6 +55,73 @@ def delete_thread(thread_id: str):
 with open("prompts.json", "r") as f:
     data = json.load(f)
 
+# if user uplaods a document
+@wa.on_message(filters.document)
+def handle_pdf(_: WhatsApp, msg: types.Message):
+
+    # 1. Get the thread_id for memory
+    thread_id = f"whatsapp_{msg.from_user.wa_id}_{msg.from_user.name}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    # 2. Check if it's actually a PDF
+    doc = msg.document
+    if doc.mime_type != "application/pdf":
+        msg.reply("Please send a valid PDF file.")
+        return
+
+    # 3. Mark read & Type
+    msg.mark_as_read()
+    msg.indicate_typing()
+    msg.reply("I received your document! Analyzing it now...")
+    
+    # 4. Download and Vectorize
+    os.makedirs("temp_downloads", exist_ok=True)
+    file_path = doc.download(path="temp_downloads")
+    
+    # rename file for readability
+    new_path = f"temp_downloads/{msg.from_user.name}.pdf"
+    os.rename(file_path, new_path)
+    file_path = new_path
+
+    # Keep the user engaged during processing
+    msg.indicate_typing() 
+
+    # 5. Vectorize the pdf and create a vector store
+    vector_store = pdf_to_vector_store(file_path)
+    
+    # 6. Retrieve Context from the vector store
+    
+    msg.indicate_typing()
+    query = msg.caption if msg.caption else "Summarize this document"
+    context = get_pdf_context(vector_store, query)
+    
+    # 7. Construct a Composite Message
+    prompt_template = PromptTemplate(
+        template=data['pdf_prompt'],
+        input_variables = ["context", "question"]
+    )
+    formatted_prompt = prompt_template.invoke({"context": context, "question": query})
+    input_text = formatted_prompt.to_string()
+    
+    # 8. in case of "clear" or new chat 
+    current_state = chat_bot.get_state(config)
+    if not current_state.values.get("messages"):
+        input_state = {
+            "messages": [
+                SystemMessage(content=data['backup']),
+                HumanMessage(content=input_text) # here input text contains context + question
+            ]
+        }
+    else:
+        input_state = {"messages": [HumanMessage(content=input_text)]}
+    
+    # Final type before generation
+    msg.indicate_typing() 
+    response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
+    msg.reply(response)
+
+
+# if user sends text message
 @wa.on_message(filters.text)
 def Chatting(_: WhatsApp, msg: types.Message):
 
@@ -76,16 +141,16 @@ def Chatting(_: WhatsApp, msg: types.Message):
 
     # in case of "clear" or new chat 
     if not current_state.values.get("messages"):
-        initial_state = {
+        input_state = {
             "messages": [
                 SystemMessage(content=data['system_prompt']),
                 HumanMessage(content=msg.text)
             ]
         }
     else:
-        initial_state = {"messages": [HumanMessage(content=msg.text)]}
+        input_state = {"messages": [HumanMessage(content=msg.text)]}
 
-    response = chat_bot.invoke(initial_state, config=config)["messages"][-1].content
+    response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
 
     msg.reply(response)
 
@@ -107,55 +172,32 @@ def pdf_to_vector_store(filename):
         pdf_reader = PyPDF2.PdfReader(f)
         extracted_text = ""
         for page in pdf_reader.pages:
-            text += page.extract_text()
+            extracted_text += page.extract_text()
 
     # devine a splitter and devide text into chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=1080, chunk_overlap=200)
     chunks = splitter.create_documents([extracted_text])
 
-    # store chunks in vetor form in vector store of chroma
+    # store chunks in vector form in vector store of chroma
     vector_store = Chroma.from_documents(chunks,embedding_model)
 
     return vector_store
 
-# # get vector stroe for that pdf
-# vector_store=pdf_to_vector_store(filename)
-# so this is the part thats gona go in the pywa pdf handler 
+
 
 def format_docs (retrieved_docs) :
-    context_text = "\n\n".join(doc. page_content for doc in retrieved_docs)
+    context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
     return context_text
 
 
-def RAG(filename,query:str):
-
-    # for temp purpose keep it here
-    vector_store=pdf_to_vector_store(filename)
-    # make retriver out of this vector store
-    retriver=vector_store.as_retriever(
+# New Helper: Just gets the text, doesn't use LLM
+def get_pdf_context(vector_store, query: str):
+    retriever = vector_store.as_retriever(
         search_type="mmr",
         search_kwargs={"k": 4, "fetch_k": 20, "lambda_mult": 0.7}
     )
-
-    # make a temp prompt
-    temp_prompt = PromptTemplate(
-        template=data['pdf_prompt'],
-        input_variables = ["context", "question"]
-    )
-
-    # from thsi we get context and quetion
-    parallel_chain = RunnableParallel({
-        'context': retriver | RunnableLambda(format_docs),
-        'question': RunnablePassthrough()
-    })
-
-    parser = StrOutputParser()
-    # make final prompt using main chain
-
-    main_chain = parallel_chain | temp_prompt | llm | parser
-
-    # return final answer
-    return main_chain.invoke(query)
+    docs = retriever.invoke(query)
+    return format_docs(docs)
 
 def Chatflow():
     graph=StateGraph(state_chatbot)
