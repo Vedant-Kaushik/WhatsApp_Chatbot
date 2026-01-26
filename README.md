@@ -38,9 +38,28 @@ If you prefer to run it yourself, this codebase is open-source and developer-fri
 ### Tech Stack
 *   **Framework**: FastAPI (High-performance Python web framework)
 *   **AI Engine**: Advanced LLM (Abstracted via LangChain/LangGraph)
-*   **Database**: SQLite (Auto-created), easily swappable for PostgreSQL
+*   **Database**: PostgreSQL (Stores conversation history, user threads, and memory checkpoints)
+*   **Vector Store**: ChromaDB (Persistent PDF embeddings on disk)
 *   **Integration**: PyWa (Verified WhatsApp APIs)
 *   **Containerization**: Docker & Docker Compose
+
+### Key Features
+
+#### 📄 **PDF Document Analysis**
+- Upload any PDF to the bot
+- Automatic text extraction and vectorization
+- Persistent storage: Ask unlimited questions about the same document
+- Smart routing: LLM decides when to query the PDF vs. general chat
+
+#### 🧠 **Intelligent Memory Management**
+- **Conversation Summarization**: After 10+ messages, old messages are summarized and compressed
+- **Infinite Context**: Never lose conversation history, even in long chats
+- **Thread-based Memory**: Each user has isolated conversation threads
+
+#### 🎯 **Production-Ready**
+- PostgreSQL for reliable state management
+- Automatic database initialization
+- Docker Compose for one-command deployment
 
 ### Fast Setup
 
@@ -86,28 +105,41 @@ APP_SECRET=your_app_secret
 GOOGLE_API_KEY=your_ai_api_key
 ```
 
-**4. Run via Docker**
+**4. Run with Docker Compose (Recommended)**
 ```bash
-docker build -t whatsapp-bot .
-docker run -p 5173:5173 --env-file .env whatsapp-bot
+# Start PostgreSQL + WhatsApp Bot
+docker-compose up --build
 
 # In a separate terminal, start ngrok
 ngrok http 5173
 ```
-> **Note**: On the first run, the system will **automatically create and initialize the database**. You will see a "Database initialized" message in the logs.
+> **Note**: Docker Compose automatically:
+> - Starts PostgreSQL database
+> - Waits for PostgreSQL to be ready (health check)
+> - Initializes LangGraph checkpoint tables
+> - Mounts `vector_stores/` and `temp_downloads/` for persistence
 
 **5. Run Locally (No Docker)**
-If you have Python installed and want to run it natively:
+If you have Python and PostgreSQL installed:
+
 ```bash
-# Install dependencies
+# 1. Start PostgreSQL (if not running)
+# macOS: brew services start postgresql@16
+# Linux: sudo systemctl start postgresql
+
+# 2. Create database
+psql -U postgres -c "CREATE DATABASE postgres;"
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Run the server (Port 5173)
+# 4. Run the server (Port 5173)
 uvicorn main:app --reload --port 5173
 
-# In a separate terminal, start ngrok
+# 5. In a separate terminal, start ngrok
 ngrok http 5173
 ```
+> **Note**: Update `DB_URI` in `main.py` if your PostgreSQL credentials differ from the default.
 
 ---
 

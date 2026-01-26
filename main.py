@@ -1,3 +1,6 @@
+# ============================================
+# 1. IMPORTS & CONFIGURATION
+# ============================================
 from pywa import WhatsApp, types, filters
 from fastapi import FastAPI
 from dotenv import load_dotenv
@@ -18,11 +21,13 @@ import PyPDF2
 from pydantic import BaseModel, Field
 from typing import Literal
 
-
 load_dotenv()
 
 DB_URI="postgresql://postgres:postgres@localhost:5432/postgres"
 
+# ============================================
+# 2. INITIALIZATION (App, LLM, DB)
+# ============================================
 app = FastAPI()
 wa = WhatsApp(
     phone_id=os.getenv("PHONE_ID"),
@@ -48,6 +53,17 @@ llm=ChatGoogleGenerativeAI(
     temperature=0.3,
 )
 
+with open("prompts.json", "r") as f:
+    data = json.load(f)
+
+class RouteDecision(BaseModel):
+    requires_document: Literal["yes", "no"] = Field(description="Whether the question requires document lookup")
+
+router_llm = llm.with_structured_output(RouteDecision)
+
+# ============================================
+# 3. HELPER FUNCTIONS (Utilities)
+# ============================================
 def delete_thread(thread_id: str):
     conn = psycopg.connect(DB_URI)
     cursor = conn.cursor()
@@ -55,8 +71,82 @@ def delete_thread(thread_id: str):
     conn.commit()
     conn.close() 
 
-with open("prompts.json", "r") as f:
-    data = json.load(f)
+def format_docs (retrieved_docs) :
+    context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
+    return context_text
+
+def get_input_text(context,query):
+    prompt_template = PromptTemplate(
+        template=data['pdf_prompt'],
+        input_variables = ["context", "question"]
+    )
+    formatted_prompt = prompt_template.invoke({"context": context, "question": query})
+    input_text = formatted_prompt.to_string()
+    return input_text
+
+def check_for_pdf_query(msg):
+    persist_directory = f"vector_stores/{msg.from_user.name}'s_pdf"
+    if os.path.exists(persist_directory):
+        # Ask LLM: "Does this question need the PDF?"
+        decision = router_llm.invoke([HumanMessage(content=msg.text)])
+        # decision is striclty yes or no
+        if decision.requires_document == "yes":
+            # Load vector store and get context
+            vector_store = Chroma(persist_directory=persist_directory, embedding_function=embedding_model)
+            context = get_pdf_context(vector_store, msg.text)
+            # Inject context into the message
+            input_text = get_input_text(context,msg.text) 
+            return input_text
+
+    return msg.text
+
+def get_input_state(config,input_text):
+    current_state = chat_bot.get_state(config)
+    if not current_state.values.get("messages"):
+        input_state = {
+            "messages": [
+                SystemMessage(content=data['backup']),
+                HumanMessage(content=input_text) # here input text contains context + question
+            ]
+        }
+    else:
+        input_state = {"messages": [HumanMessage(content=input_text)]} # input_text = context + question
+    return input_state
+
+# ============================================
+# 4. PDF PROCESSING (Vector Store)
+# ============================================
+def pdf_to_vector_store(filename,name_id):
+
+    # read the file and extract text
+    with open(filename, 'rb') as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        extracted_text = ""
+        for page in pdf_reader.pages:
+            extracted_text += page.extract_text()
+
+    # devine a splitter and devide text into chunks
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1080, chunk_overlap=200)
+    chunks = splitter.create_documents([extracted_text])
+
+    # store chunks in vector form in vector store of chroma and save it to disk
+    os.makedirs("vector_stores", exist_ok=True)
+    persist_directory = f"vector_stores/{name_id}'s_pdf" # overwrrites if pdf is send by same user again
+    vector_store = Chroma.from_documents(chunks, embedding_model, persist_directory=persist_directory)
+
+    return vector_store
+
+def get_pdf_context(vector_store, query: str):
+    retriever = vector_store.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 4, "fetch_k": 20, "lambda_mult": 0.7}
+    )
+    docs = retriever.invoke(query)
+    return format_docs(docs)
+
+# ============================================
+# 5. MESSAGE HANDLERS (WhatsApp)
+# ============================================
 
 # if user uplaods a document
 @wa.on_message(filters.document)
@@ -99,34 +189,15 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
     context = get_pdf_context(vector_store, query)
     
     # 7. Construct a Composite Message
-    prompt_template = PromptTemplate(
-        template=data['pdf_prompt'],
-        input_variables = ["context", "question"]
-    )
-    formatted_prompt = prompt_template.invoke({"context": context, "question": query})
-    input_text = formatted_prompt.to_string()
+    input_text = get_input_text(context,query)
     
     # 8. in case of "clear" or new chat 
-    current_state = chat_bot.get_state(config)
-    if not current_state.values.get("messages"):
-        input_state = {
-            "messages": [
-                SystemMessage(content=data['backup']),
-                HumanMessage(content=input_text) # here input text contains context + question
-            ]
-        }
-    else:
-        input_state = {"messages": [HumanMessage(content=input_text)]}
+    input_state = get_input_state(config,input_text)
     
     # Final type before generation
     msg.indicate_typing() 
     response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
     msg.reply(response)
-
-class RouteDecision(BaseModel):
-    requires_document: Literal["yes", "no"] = Field(description="Whether the question requires document lookup")
-
-router_llm = llm.with_structured_output(RouteDecision)
 
 # if user sends text message
 @wa.on_message(filters.text)
@@ -135,18 +206,6 @@ def Chatting(_: WhatsApp, msg: types.Message):
     thread_id=f"whatsapp_{msg.from_user.wa_id}_{msg.from_user.name}"
     config={"configurable": {"thread_id": thread_id}}
 
-    msg.indicate_typing()
-    persist_directory = f"vector_stores/{msg.from_user.name}'s_pdf"
-    if os.path.exists(persist_directory):
-        # Ask LLM: "Does this question need the PDF?"
-        decision = router_llm.invoke([HumanMessage(content=msg.text)])
-        # decision is striclty yes or no
-        if decision.requires_document == "yes":
-            # Load vector store and get context
-            vector_store = Chroma(persist_directory=persist_directory, embedding_function=embedding_model)
-            context = get_pdf_context(vector_store, msg.text)
-            # Inject context into the message
-    
     # mark as read and show typing indicator
     msg.mark_as_read()
     msg.indicate_typing()
@@ -156,23 +215,20 @@ def Chatting(_: WhatsApp, msg: types.Message):
         msg.react("👍")
         return
 
-    current_state = chat_bot.get_state(config)
-
+    # get input text
+    input_text = check_for_pdf_query(msg)
+    
     # in case of "clear" or new chat 
-    if not current_state.values.get("messages"):
-        input_state = {
-            "messages": [
-                SystemMessage(content=data['system_prompt']),
-                HumanMessage(content=msg.text)
-            ]
-        }
-    else:
-        input_state = {"messages": [HumanMessage(content=msg.text)]}
+    input_state = get_input_state(config,input_text)
 
     response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
 
     msg.reply(response)
 
+
+# ============================================
+# 6. GRAPH COMPONENTS (LangGraph State)
+# ============================================
 
 # Now lets get responses with history from llm
 
@@ -223,41 +279,9 @@ def should_summarize(state:summary_messages):
 
     return len(state["messages"])>10 # consedering llm gives long answers
 
-def pdf_to_vector_store(filename,name_id):
-
-    # read the file and extract text
-    with open(filename, 'rb') as f:
-        pdf_reader = PyPDF2.PdfReader(f)
-        extracted_text = ""
-        for page in pdf_reader.pages:
-            extracted_text += page.extract_text()
-
-    # devine a splitter and devide text into chunks
-    splitter = RecursiveCharacterTextSplitter(chunk_size=1080, chunk_overlap=200)
-    chunks = splitter.create_documents([extracted_text])
-
-    # store chunks in vector form in vector store of chroma and save it to disk
-    persist_directory = f"vector_stores/{name_id}'s_pdf" # overwrrites if pdf is send by same user again
-    vector_store = Chroma.from_documents(chunks, embedding_model, persist_directory=persist_directory)
-
-    return vector_store
-
-
-
-def format_docs (retrieved_docs) :
-    context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
-    return context_text
-
-
-# New Helper: Just gets the text, doesn't use LLM
-def get_pdf_context(vector_store, query: str):
-    retriever = vector_store.as_retriever(
-        search_type="mmr",
-        search_kwargs={"k": 4, "fetch_k": 20, "lambda_mult": 0.7}
-    )
-    docs = retriever.invoke(query)
-    return format_docs(docs)
-
+# ============================================
+# 7. GRAPH SETUP & INITIALIZATION
+# ============================================
 def Chatflow():
     graph=StateGraph(summary_messages)
 
