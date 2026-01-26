@@ -2,23 +2,26 @@ from pywa import WhatsApp, types, filters
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI,GoogleGenerativeAIEmbeddings
-from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage
+from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage,RemoveMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
+from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.prompts import PromptTemplate
 from langgraph.graph.message import add_messages
-from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, START,END
 from langgraph.prebuilt import ToolNode
 from typing import TypedDict, Annotated
-import sqlite3
+import psycopg
 import os
 import json
 import PyPDF2
+from pydantic import BaseModel, Field
+from typing import Literal
+
 
 load_dotenv()
-conn = sqlite3.connect("conversation.db", check_same_thread=False)
-chekpointer = SqliteSaver(conn)
+
+DB_URI="postgresql://postgres:postgres@localhost:5432/postgres"
 
 app = FastAPI()
 wa = WhatsApp(
@@ -46,9 +49,9 @@ llm=ChatGoogleGenerativeAI(
 )
 
 def delete_thread(thread_id: str):
-    conn = sqlite3.connect("conversation.db")
+    conn = psycopg.connect(DB_URI)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+    cursor.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
     conn.commit()
     conn.close() 
 
@@ -87,7 +90,7 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
     msg.indicate_typing() 
 
     # 5. Vectorize the pdf and create a vector store
-    vector_store = pdf_to_vector_store(file_path)
+    vector_store = pdf_to_vector_store(file_path,msg.from_user.name)
     
     # 6. Retrieve Context from the vector store
     
@@ -120,6 +123,10 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
     response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
     msg.reply(response)
 
+class RouteDecision(BaseModel):
+    requires_document: Literal["yes", "no"] = Field(description="Whether the question requires document lookup")
+
+router_llm = llm.with_structured_output(RouteDecision)
 
 # if user sends text message
 @wa.on_message(filters.text)
@@ -128,6 +135,18 @@ def Chatting(_: WhatsApp, msg: types.Message):
     thread_id=f"whatsapp_{msg.from_user.wa_id}_{msg.from_user.name}"
     config={"configurable": {"thread_id": thread_id}}
 
+    msg.indicate_typing()
+    persist_directory = f"vector_stores/{msg.from_user.name}'s_pdf"
+    if os.path.exists(persist_directory):
+        # Ask LLM: "Does this question need the PDF?"
+        decision = router_llm.invoke([HumanMessage(content=msg.text)])
+        # decision is striclty yes or no
+        if decision.requires_document == "yes":
+            # Load vector store and get context
+            vector_store = Chroma(persist_directory=persist_directory, embedding_function=embedding_model)
+            context = get_pdf_context(vector_store, msg.text)
+            # Inject context into the message
+    
     # mark as read and show typing indicator
     msg.mark_as_read()
     msg.indicate_typing()
@@ -157,15 +176,54 @@ def Chatting(_: WhatsApp, msg: types.Message):
 
 # Now lets get responses with history from llm
 
-def chatbot(state_chatbot):
-    message=state_chatbot['messages']
-    response=llm.invoke(message) 
-    return {'messages':[response]}
-    
 class state_chatbot(TypedDict):
     messages:Annotated[list[BaseMessage], add_messages]
 
-def pdf_to_vector_store(filename):
+class summary_messages(state_chatbot): #inherits from state_chatbot
+    summary:str
+
+
+def chatbot(state:summary_messages):
+
+    message=[] # temporary list to store messages it will be combined with summary and state['messages']
+
+    if state['summary']:
+        message.append(
+            HumanMessage(content=f"converstaion summary \n{state['summary']}")
+        )
+
+    message.extend(state['messages'])
+    response=llm.invoke(message) 
+    return {'messages':[response]}
+    
+def summarize_conversation(state:summary_messages):
+
+    exsisting_summary=state["summary"]
+
+    if exsisting_summary:
+
+        prompt=f"exsisting_summary\n{exsisting_summary}\n\n extend the summary using new conversation above"
+
+    else :
+        prompt="suumarize the conversation"
+
+    message_and_summary=state["messages"]+[HumanMessage(content=prompt)] # all messages + summary 
+
+    new_summary=llm.invoke(message_and_summary)
+
+    # all messages except last 2
+    message_to_delete=state["messages"][:-2]
+
+    return {
+        "summary":new_summary.content,
+        "messages":[RemoveMessage(id=m.id) for m in message_to_delete],
+    }
+
+def should_summarize(state:summary_messages):
+
+    return len(state["messages"])>10 # consedering llm gives long answers
+
+def pdf_to_vector_store(filename,name_id):
 
     # read the file and extract text
     with open(filename, 'rb') as f:
@@ -178,8 +236,9 @@ def pdf_to_vector_store(filename):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1080, chunk_overlap=200)
     chunks = splitter.create_documents([extracted_text])
 
-    # store chunks in vector form in vector store of chroma
-    vector_store = Chroma.from_documents(chunks,embedding_model)
+    # store chunks in vector form in vector store of chroma and save it to disk
+    persist_directory = f"vector_stores/{name_id}'s_pdf" # overwrrites if pdf is send by same user again
+    vector_store = Chroma.from_documents(chunks, embedding_model, persist_directory=persist_directory)
 
     return vector_store
 
@@ -200,14 +259,27 @@ def get_pdf_context(vector_store, query: str):
     return format_docs(docs)
 
 def Chatflow():
-    graph=StateGraph(state_chatbot)
+    graph=StateGraph(summary_messages)
 
     graph.add_node('chatbot',chatbot)
+    graph.add_node('summarize_conversation',summarize_conversation)
 
     graph.add_edge(START,'chatbot')
-    graph.add_edge('chatbot',END)
+    graph.add_conditional_edges(
+        'chatbot',
+        should_summarize,
+        {
+            True:"summarize_conversation",
+            False:END
+        }
+    )
+    graph.add_edge('summarize_conversation',END)
     
-    workflow = graph.compile(checkpointer=chekpointer)
+    with PostgresSaver.from_conn_string(DB_URI) as checkpoint:
+
+        checkpoint.setup()
+        workflow = graph.compile(checkpointer=checkpoint)
+
     return workflow
 
 chat_bot=Chatflow()
