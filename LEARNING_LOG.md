@@ -725,7 +725,7 @@ https://ik.imagekit.io/demo/sample-video.mp4/ik-master.mpd?tr=sr-240_360_480_720
 
 ---
 
-### 2. 🚀 The Infrastructure: NPCI
+### 2.  The Infrastructure: NPCI
 *   **NPCI (National Payments Corporation of India)**: The backbone of UPI.
 *   **"Engineering Marvel"**: It's a **Blackbox**. No one truly knows the Low Level Design (LLD) of NPCI publicly. It's a closely guarded system.
 *   **Tech Stack**: Primarily runs on **Java**.
