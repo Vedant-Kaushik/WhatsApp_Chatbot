@@ -672,7 +672,7 @@ Consistent Hashing is used in:
 
 ---
 
-### 4. 🛠️ Practical Implementation (ImageKit Example)
+### 4.  Practical Implementation (ImageKit Example)
 Instead of building a transcoder from scratch (using FFmpeg), we can use a service like **ImageKit**.
 
 **The Process**:
