@@ -94,7 +94,7 @@ graph TD
     *   🥶 **Cold Start**: First request takes time (spinning up the container).
     *   🔒 **Vendor Lock-in**: Hard to move code from AWS to Google later.
 
-### 6. 🐳 Evolution of Compute
+### 6.  Evolution of Compute
 From "Works on my Machine" to "Works Everywhere".
 
 **Timeline**:
