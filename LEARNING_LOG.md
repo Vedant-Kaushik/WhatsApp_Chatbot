@@ -60,7 +60,7 @@ graph TD
     E --> H(("Worker 3"))
 ```
 
-### 3. 💾 Database Scaling: Master-Slave
+### 3. Database Scaling: Master-Slave
 **Rule**: Separation of Duties.
 *   **Primary DB (Master)**: Handles **Writes** (INSERT, UPDATE). Source of Truth.
 *   **Secondary DB (Read Replica)**: Handles **Reads** (SELECT). Used for analytical queries/reporting.
