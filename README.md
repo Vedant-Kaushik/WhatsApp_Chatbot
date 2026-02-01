@@ -168,7 +168,18 @@ We are constantly learning and exploring new system architectures to make this b
     *   Investigating Cloud-Native deployments to support more users efficiently.
     *   Learning system design concepts like distributed queues for handling complex tasks in the background.
 
-3.  **Agentic Capabilities**:
     *   Allowing the bot to perform real-world actions (web search, data lookup) to be more helpful.
+    
+4.  **📈 Coming Soon: AI Investment Analyst (Upstox)**
+    We are building a powerful **Investment Advice Engine** directly into WhatsApp.
+    
+    **The Logic (Already Designed):**
+    1.  **Smart Filter**: Scans the **Nifty 500** (Top 500 Indian companies) instead of random junk stocks.
+    2.  **Affordability Check**: You type "Invest ₹50k". The bot instantly filters out stocks way above your budget (like MRF).
+    3.  **Liquidity Sort**: Picks the Top 5 most liquid/active stocks to ensure safety.
+    4.  **Deep-Dive Analysis**: Fetches **6 Months of Daily Candles** (History) for the shortlisted stocks.
+    5.  **LLM Verdict**: The AI analyzes the chart patterns and gives you a clear **Buy/Hold/Avoid** rating with reasons.
+    
+    *Goal: To give you a Hedge Fund Analyst in your pocket.*
 
 ---
