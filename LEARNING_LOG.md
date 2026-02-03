@@ -180,7 +180,7 @@ The system is built of 3 main parts (managed by **Zookeeper**):
 
 **Zookeeper**: The "Manager". It tracks which Broker is alive and who is the Leader of a partition.
 
-### 3. 👥 Consumer Groups & Auto-balancing
+### 3.  Consumer Groups & Auto-balancing
 **Concept**: How to process a massive topic in parallel?
 *   **Consumer Group**: A team of workers (Microservices).
 *   **Rule**: One Partition can be read by ONLY ONE Consumer in a group.
