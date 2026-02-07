@@ -775,3 +775,86 @@ Unlike traditional methods where you transfer "money" directly with heavy detail
 
 
 
+
+---
+
+## Day 12: Bloom Filters (System Design)
+
+**Problem Statement:** Design a "Username Availability Check" for a massive scale app like Gmail or Twitter.
+*   **The Check:** User enters `@vedant`. Does it exist?
+*   **Scale:** Say 200 Million Users.
+*   **Naive Approach:**
+    *   **SQL (Postgres):** Too slow. `SELECT *` on 200M rows is $O(\log N)$ or worse with disk I/O.
+    *   **Hash Map (RAM):** Fast ($O(1)$) but **Space Expensive**. Storing 200M strings in 64-bit architecture consumes massive RAM.
+
+**The Solution: Bloom Filters**
+A space-efficient probabilistic data structure that tells us if an element **"Might Exist"** or **"Definitely Does Not Exist"**.
+
+> "Bloom filters are like a very efficient bouncer who has a bad memory. He might let a stranger in (False Positive), but he never kicks a friend out (No False Negatives)."
+
+### 1. How it works
+Instead of storing the string "vedant", we run it through multiple Hash Functions and flip bits in a fixed-size array.
+
+**Components:**
+1.  **Bit Array:** Large array of zeros `[0, 0, 0, 0, ...]`.
+2.  **Hash Functions ($k$):** Functions that map a string to an index.
+
+**Example:**
+Insert `@vedant`:
+*   $h_1(\text{"@vedant"}) \to 2$
+*   $h_2(\text{"@vedant"}) \to 5$
+*   $h_3(\text{"@vedant"}) \to 8$
+*   **Action:** Flip bits at indices 2, 5, and 8 to `1`.
+
+```mermaid
+graph LR
+    input["Input: @vedant"] --> h1[Hash 1]
+    input --> h2[Hash 2]
+    input --> h3[Hash 3]
+    
+    h1 -->|idx 2| b2[1]
+    h2 -->|idx 5| b5[1]
+    h3 -->|idx 8| b8[1]
+    
+    subgraph "Bit Array (Buckets)"
+    b0[0] --- b1[0] --- b2 --- b3[0] --- b4[0] --- b5 --- b6[0] --- b7[0] --- b8
+    end
+```
+
+### 2. Checking Existence
+To check if `@vedant` is taken:
+1.  Run the same hashes.
+2.  Check if bits at 2, 5, 8 are **ALL `1`**.
+    *   If **YES**: Potentially Taken (Might exist).
+    *   If **NO** (even one is 0): Definitely Available (Does not exist).
+
+### 3. The "False Positive" Issue
+Suppose we check for a new user `@john` (who hasn't registered).
+*   $h_1(\text{"@john"}) \to 2$ (Collision with `@vedant`)
+*   $h_2(\text{"@john"}) \to 5$ (Collision with `@vedant`)
+*   $h_3(\text{"@john"}) \to 8$ (Collision with `@vedant`)
+
+The filter sees all `1`s and says **"Taken"**. But actually, it was empty.
+*   **Result:** `@john` gets a "Username Taken" error even though nobody has it. This username is "wasted".
+*   **Mitigation:** Increase Bit Array size ($m$) and number of Hash Functions ($k$).
+
+```mermaid
+graph TD
+    subgraph "False Positive Scenario"
+    u1["User 1: @vedant (Registered)"] -->|Sets| bits[Bit Array: 1 at 2,5,8]
+    u2["User 2: @john (New)"] -->|Hashes to| h["Indices 2, 5, 8"]
+    
+    h -->|Check| bits
+    bits -->|All 1s?| result["Result: TAKEN"]
+    result -->|Reality| lie["False Positive (Actually Free)"]
+    end
+```
+
+### Key Takeaways
+*   **Probabilistic:** Accurate for "No", approximate for "Yes".
+*   **Space Efficient:** Uses bits, not bytes. Can represent millions of items in KBs/MBs.
+*   **UseCase:**
+    *   **Databases:** To avoid expensive disk lookups for non-existent rows.
+    *   **CDN:** To check if an item is cached.
+    *   **Spell Checkers:** Fast lookup.
+
