@@ -269,7 +269,7 @@ graph TD
 ```
 
 ### 3. pro-tips from Today
-**A. ⏳ Eventual Consistency**:
+**A.  Eventual Consistency**:
 You figured it out! The "Famous" Eventual Consistency is literally just **The Time spent in the SQS Queue**.
 *   User clicks "Buy".
 *   Postgres says "Saved".
