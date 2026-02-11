@@ -19,8 +19,10 @@ import os,time
 import shutil
 import json
 import PyPDF2
+from typing import List
 from pydantic import BaseModel, Field
 from typing import Literal
+from langgraph.store.base import BaseStore
 
 load_dotenv()
 
@@ -64,6 +66,16 @@ class RouteDecision(BaseModel):
     requires_document: Literal["yes", "no"] = Field(description="Whether the question requires document lookup")
 
 router_llm = llm.with_structured_output(RouteDecision)
+
+class MemoryItem(BaseModel):
+    text: str = Field(description="Atomic user memory")
+    is_new: bool = Field(description="True if new, false if duplicate")
+
+class MemoryDecision(BaseModel):
+    should_write: bool
+    memories: List[MemoryItem] = Field(default_factory=list)
+
+memory_extractor = llm.with_structured_output(MemoryDecision)
 
 # ============================================
 # 3. HELPER FUNCTIONS (Utilities)
