@@ -16,13 +16,15 @@ from langgraph.prebuilt import ToolNode
 from typing import TypedDict, Annotated
 import psycopg
 import os,time
-import shutil
+import shutil,uuid
 import json
 import PyPDF2
 from typing import List
 from pydantic import BaseModel, Field
 from typing import Literal
 from langgraph.store.base import BaseStore
+from langchain_core.runnables import RunnableConfig
+from langgraph.store.postgres import PostgresStore
 
 load_dotenv()
 
@@ -30,6 +32,10 @@ DB_URI="postgresql://postgres:postgres@localhost:5432/postgres"
 conn = psycopg.connect(DB_URI, autocommit=True)
 checkpoint = PostgresSaver(conn)
 checkpoint.setup()
+
+conn_ltm = psycopg.connect(DB_URI, autocommit=True)
+store = PostgresStore(conn_ltm)
+store.setup()
 
 # ============================================
 # 2. INITIALIZATION (App, LLM, DB)
@@ -77,6 +83,8 @@ class MemoryDecision(BaseModel):
 
 memory_extractor = llm.with_structured_output(MemoryDecision)
 
+MEMORY_PROMPT = data['memory_prompt']
+
 # ============================================
 # 3. HELPER FUNCTIONS (Utilities)
 # ============================================
@@ -93,6 +101,11 @@ def delete_thread(thread_id: str, user_name: str):
     if os.path.exists(persist_directory):
         shutil.rmtree(persist_directory) 
         time.sleep(0.1) # to avoid race condition
+
+    ns = ("user", thread_id, "details")
+    items = store.search(ns)
+    for item in items:
+        store.delete(ns, item.key)
 
 def format_docs (retrieved_docs) :
     context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
@@ -123,17 +136,19 @@ def check_for_pdf_query(msg):
 
     return msg.text
 
-def get_input_state(config, input_text):
+def get_input_state(config, input_text, msg_id: str):
     current_state = chat_bot.get_state(config)
+    
+    # We leave the user details injection for the chatbot node to handle dynamically
     if not current_state.values.get("messages"):
         input_state = {
             "messages": [
-                SystemMessage(content=data['system_prompt']),  # Use the correct prompt
                 HumanMessage(content=input_text)
-            ]
+            ],
+            "msg_id": msg_id
         }
     else:
-        input_state = {"messages": [HumanMessage(content=input_text)]} # input_text = context + question
+        input_state = {"messages": [HumanMessage(content=input_text)],"msg_id":msg_id} # input_text = context + question
     return input_state
 
 # ============================================
@@ -228,7 +243,7 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
     input_text = get_input_text(context,query)
     
     # 8. in case of "clear" or new chat 
-    input_state = get_input_state(config, input_text)
+    input_state = get_input_state(config, input_text,msg.id)
     
     # Final type before generation
     msg.indicate_typing() 
@@ -255,8 +270,9 @@ def Chatting(_: WhatsApp, msg: types.Message):
     input_text = check_for_pdf_query(msg)
     
     # in case of "clear" or new chat 
-    input_state = get_input_state(config,input_text)
+    input_state = get_input_state(config,input_text,msg.id)
 
+    # i need to pass meesage i here for remember node name space
     response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
 
     msg.reply(response)
@@ -270,14 +286,26 @@ def Chatting(_: WhatsApp, msg: types.Message):
 
 class state_chatbot(TypedDict):
     messages:Annotated[list[BaseMessage], add_messages]
+    msg_id:str
 
 class summary_messages(state_chatbot): #inherits from state_chatbot
     summary:str
 
 
-def chatbot(state:summary_messages):
+def chatbot(state:summary_messages,config :RunnableConfig,store:BaseStore):
 
     message=[] # temporary list to store messages it will be combined with summary and state['messages']
+
+    user_id = config["configurable"]["thread_id"]
+    ns = ("user", user_id, "details") # name space for LTM
+    
+    items = store.search(ns)
+    user_details = "\n".join(it.value.get("data", "") for it in items) if items else ""
+
+    # Inject LTM context into the unified system prompt from prompts.json
+    system_msg = SystemMessage(
+        content=data["system_prompt"].format(user_details_content=user_details or "(empty)")
+    )
 
     if state.get('summary'):
         message.append(
@@ -285,11 +313,11 @@ def chatbot(state:summary_messages):
         )
 
     message.extend(state['messages'])
-    response=llm.invoke(message) 
+    response=llm.invoke(message +[system_msg]) 
     return {'messages':[response]}
     
 def summarize_conversation(state:summary_messages):
-
+    
     exsisting_summary=state.get("summary")
 
     if exsisting_summary:
@@ -315,16 +343,45 @@ def should_summarize(state:summary_messages):
 
     return len(state["messages"])>10 # consedering llm gives long answers
 
+def remember_node(state: summary_messages, config: RunnableConfig,  store: BaseStore):
+
+    user_id = config["configurable"]["thread_id"]
+    ns = ("user", user_id, "details")
+
+    # existing memory (all items under namespace)
+    items = store.search(ns)
+    existing = "\n".join(it.value.get("data", "") for it in items) if items else "(empty)"
+
+    # latest user message
+    last_text = state["messages"][-1].content
+
+    decision: MemoryDecision = memory_extractor.invoke(
+        [
+            SystemMessage(content=MEMORY_PROMPT.format(user_details_content=existing)),
+            HumanMessage(content=last_text),
+        ]
+    )
+    
+    if decision.should_write:
+        for mem in decision.memories:
+            if mem.is_new and mem.text.strip():
+                # msg.id is used as key for memory
+                store.put(ns, state["msg_id"], {"data": mem.text.strip()})
+
+    return {}
+
 # ============================================
 # 7. GRAPH SETUP & INITIALIZATION
 # ============================================
 def Chatflow():
     graph=StateGraph(summary_messages)
 
+    graph.add_node("remember", remember_node)
     graph.add_node('chatbot',chatbot)
     graph.add_node('summarize_conversation',summarize_conversation)
 
-    graph.add_edge(START,'chatbot')
+    graph.add_edge(START,'remember')
+    graph.add_edge("remember","chatbot")
     graph.add_conditional_edges(
         'chatbot',
         should_summarize,
@@ -335,7 +392,7 @@ def Chatflow():
     )
     graph.add_edge('summarize_conversation',END)
     
-    workflow = graph.compile(checkpointer=checkpoint)
+    workflow = graph.compile(checkpointer=checkpoint,store=store)
 
     return workflow
 
