@@ -55,6 +55,8 @@ If you prefer to run it yourself, this codebase is open-source and developer-fri
 - **Conversation Summarization**: After 10+ messages, old messages are summarized and compressed
 - **Infinite Context**: Never lose conversation history, even in long chats
 - **Thread-based Memory**: Each user has isolated conversation threads
+- **Advanced Long-Term Memory (LTM)**: Uses `PostgresStore` to extract and permanently save factual details about the user, routed dynamically via WhatsApp's native `msg.id`.
+- **Customizable Personas**: All system prompts (like the core Gentleman AI persona and Memory Extractor) are fully decoupled into an easy-to-edit `prompts.json` file.
 
 #### 🎯 **Production-Ready**
 - PostgreSQL for reliable state management
@@ -76,7 +78,7 @@ You need to fill the `.env` file with secrets from Meta and Google.
     2.  Create an App -> Select **Other** -> **Business** -> **WhatsApp**.
     3.  **API Setup**: In the sidebar, go to **WhatsApp > API Setup**.
         *   Copy **Phone Number ID** (`PHONE_ID`).
-        *   Copy **Temporary Access Token** (or configure a System User for permanent access) (`WHATSAPP_TOKEN`).
+        *   **Permanent Access Token**: Go to **Business Settings -> System Users**. Create a System User (Admin role). Click **Add Assets** and assign both your **App** (Full Control) and your **WhatsApp Account** (Full Control). Click **Generate Token**, select your App, and check `whatsapp_business_messaging` and `whatsapp_business_management`. Copy this permanent string (`WHATSAPP_TOKEN`).
     4.  **App Basic Settings**: Go to **App Settings > Basic**.
         *   Copy **App ID** (`APP_ID`) and **App Secret** (`APP_SECRET`).
     5.  **Webhook**: Go to **WhatsApp > Configuration**.
@@ -130,11 +132,11 @@ If you have Python and PostgreSQL installed:
 # 2. Create database
 psql -U postgres -c "CREATE DATABASE postgres;"
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Install dependencies and set up environment
+uv sync
 
-# 4. Run the server (Port 5173)
-uvicorn main:app --reload --port 5173
+# 4. Run the development server (auto-reloads and ignores .venv)
+uv run dev
 
 # 5. In a separate terminal, start ngrok
 ngrok http 5173
