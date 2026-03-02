@@ -858,3 +858,113 @@ graph TD
     *   **CDN:** To check if an item is cached.
     *   **Spell Checkers:** Fast lookup.
 
+---
+
+## Day 13: WebRTC Architectures & Notification System Resilience
+
+**Focus**: Multi-Conference App System Design (WebRTC) and resilient notification delivery.
+
+### 1. 🎥 WebRTC Architectures (Video Conferencing)
+When building a video conferencing app (like Zoom or Google Meet), WebRTC is the standard for real-time communication. It uses **UDP** for fast, direct connections. There are three main ways to architect this:
+
+**A. Mesh (Peer-to-Peer / P2P)**
+*   **How it works**: Every participant connects *directly* to every other participant. No central server for media.
+
+```mermaid
+graph TD
+    P1((Peer 1)) <--> P2((Peer 2))
+    P2 <--> P3((Peer 3))
+    P3 <--> P1
+    P1 <--> P4((Peer 4))
+    P2 <--> P4
+    P3 <--> P4
+```
+
+*   **Pros**: Simple, free (no server costs).
+*   **Cons**:
+    *   **Not Scalable**: Bandwidth and CPU on the client side explode as more people join (a particular peer carries a huge load).
+    *   Very complex to manage states and hard debugging.
+
+**B. MCU (Multipoint Control Unit)**
+*   **How it works**: A central server acts as a mixer. Peers send their audio/video to the server. The server *combines* them into a **single, unified stream** and sends that one stream back to everyone.
+
+```mermaid
+graph TD
+    subgraph MCU Server
+        Mixer[Audio/Video Mixer]
+    end
+    
+    P1((Peer 1)) -->|Up: Raw| Mixer
+    P2((Peer 2)) -->|Up: Raw| Mixer
+    P3((Peer 3)) -->|Up: Raw| Mixer
+    
+    Mixer -->|Down: Combined Grid| P1
+    Mixer -->|Down: Combined Grid| P2
+    Mixer -->|Down: Combined Grid| P3
+```
+
+*   **Pros**: Very low bandwidth for clients (they only download one stream). Great for legacy devices.
+*   **Cons**:
+    *   **CPU Intensive / Expensive**: The server has to decode, mix, and re-encode video for everyone.
+    *   **Inflexible**: Users can't choose their own layout or pin specific people easily (the server decides the grid).
+
+**C. SFU (Selective Forwarding Unit)**
+*   **How it works**: A central server acts as a router. A peer sends their *one* upstream to the server. The server then forwards (routes) that **RAW stream** to everyone else.
+
+```mermaid
+graph TD
+    subgraph SFU Server
+        Router[Stream Router]
+    end
+    
+    P1((Peer 1)) -->|Up: 1 Stream| Router
+    P2((Peer 2)) -->|Up: 1 Stream| Router
+    
+    Router -->|Down: P2's Stream| P1
+    Router -->|Down: P1's Stream| P2
+    
+    %% If Peer 3 joins, Router sends P1 & P2 to P3, and P3 to P1 & P2
+```
+
+*   **Pros**:
+    *   **Very Flexible**: Clients receive individual RAW streams. You can pin a particular stream, mute another, or adapt grid layouts dynamically on the client side (unlike MCU).
+    *   Balances server CPU and client bandwidth well.
+*   **Cons**:
+    *   Can still be CPU intensive and expensive at scale.
+    *   Minor lag due to real-time joining from peers.
+*   *Implementation Note*: Libraries like **MediaSoup** are used to implement SFUs, MCUs, or P2P, though they are not easy to work with.
+
+---
+
+### 2. 📬 Notification Service System Design
+When sending millions of notifications (Emails, SMS, Push), APIs will inevitably fail. Here's how to build resilience:
+
+**A. Exponential Backoff (Not "Weight"!)**
+*   **The Problem**: If a downstream SMS API is down, constantly retrying every 1 second will DDoS the API and clog your own system.
+*   **The Solution**: When a request fails, wait before retrying, and **multiply the wait time** after each failure.
+    *   *Try 1*: Fails -> Wait 1s
+    *   *Try 2*: Fails -> Wait 2s
+    *   *Try 3*: Fails -> Wait 4s
+    *   *Try 4*: Fails -> Wait 8s
+*   **Why?**: It gives the broken system "breathing room" to recover instead of hammering it.
+
+**B. Dead Letter Queue (DLQ)**
+*   **The Problem**: What if a notification fails 5 times, even with Exponential Backoff? If we keep it in the main queue, it blocks fresh, urgent notifications from going out. "Poison messages" clog the pipe.
+*   **The Solution**: After a set number of max retries, move the failed message out of the main queue into a **Dead Letter Queue (DLQ)**.
+
+```mermaid
+graph LR
+    Producer[API] --> MainQ[(Main Queue)]
+    MainQ --> Worker[Notification Worker]
+    
+    Worker -->|Success| Done((Delivered))
+    Worker -->|Failure 1-4| Wait[Exponential Backoff]
+    Wait -->|Retry| MainQ
+    
+    Worker -->|Failure 5 (Max)| DLQ[(Dead Letter Queue)]
+    DLQ --> Admin[Manual Inspection / Debugging]
+```
+
+*   **Why?**:
+    *   Keeps the main queue healthy and fast.
+    *   Allows engineers to inspect the DLQ later to find out *why* they failed (e.g., bad formatting) and manually replay them.
