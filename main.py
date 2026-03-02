@@ -16,7 +16,7 @@ from langgraph.prebuilt import ToolNode
 from typing import TypedDict, Annotated
 import psycopg
 import os,time
-import shutil,uuid
+import shutil
 import json
 import PyPDF2
 from typing import List
@@ -56,11 +56,11 @@ wa = WhatsApp(
 )
 
 embedding_model = GoogleGenerativeAIEmbeddings(
-    model="embedding-001"
+    model="gemini-embedding-001"
 )
 
 llm=ChatGoogleGenerativeAI(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     google_api_key=os.getenv("GOOGLE_API_KEY"),
     temperature=0.3,
 )
@@ -163,6 +163,10 @@ def pdf_to_vector_store(filename,name_id):
         for page in pdf_reader.pages:
             extracted_text += page.extract_text()
 
+    # Check if the PDF had any readable text
+    if not extracted_text.strip():
+        return None
+
     # devine a splitter and devide text into chunks
     splitter = RecursiveCharacterTextSplitter(chunk_size=1080, chunk_overlap=200)
     chunks = splitter.create_documents([extracted_text])
@@ -232,6 +236,10 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
         shutil.rmtree(persist_directory) 
         time.sleep(0.1) # to avoid race condition
     vector_store = pdf_to_vector_store(file_path,msg.from_user.name)
+    
+    if not vector_store:
+        msg.reply("I couldn't read any text from that PDF. It might be an image-based scan or completely empty!")
+        return
     
     # 6. Retrieve Context from the vector store
     
