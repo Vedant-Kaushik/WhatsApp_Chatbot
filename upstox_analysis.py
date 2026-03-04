@@ -1,4 +1,5 @@
 
+from attrs import field
 import os
 import time
 import requests
@@ -7,14 +8,32 @@ import json
 import io
 import upstox_client
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from pydantic import BaseModel
 
 # Load Environment Variables
 load_dotenv()
-
+app=FastAPI()
 # --- Configuration ---
 UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY")
 ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN") # Ensure you have this in .env or handle auth flow
 # Note: In a real app, you would handle the OAuth flow to get the access token dynamically.
+
+# Configure APIs
+configuration = upstox_client.Configuration()
+configuration.access_token = ACCESS_TOKEN
+api_client = upstox_client.ApiClient(configuration)
+
+history_api = upstox_client.HistoryV3Api(api_client)
+
+market_api = upstox_client.MarketQuoteV3Api(api_client)
+
+llm=ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    google_api_key=os.getenv("GOOGLE_API_KEY"),
+    temperature=0.3,
+)
 
 # --- Constants ---
 NIFTY_50_SYMBOLS = [
@@ -75,31 +94,26 @@ def get_target_instrument_keys():
     # Use flatten_list just in case, though logically they should be flat now
     combined_dirty = nifty_keys + bse_index_keys
     flat_keys = flatten_list(combined_dirty)
-    unique_keys = list(set(flat_keys))
+    target_keys = list(set(flat_keys))
     
-    print(f"Total Unique Instruments identified: {len(unique_keys)}")
-    return unique_keys
+    print(f"Total Unique Instruments identified: {len(target_keys)}")
+    return target_keys
 
-def fetch_historical_data(instrument_keys):
+def fetch_historical_data(target_keys):
     """Fetches monthly candle data for the list of instruments."""
-    
-    # Setup Upstox Client
-    configuration = upstox_client.Configuration()
-    configuration.access_token = ACCESS_TOKEN
-    api_instance = upstox_client.HistoryV3Api(upstox_client.ApiClient(configuration))
     
     candle_data = []
     
-    print(f"Fetching historical data for {len(instrument_keys)} instruments...")
+    print(f"Fetching historical data for {len(target_keys)} instruments...")
     
     # Note: Hardcoded dates as per user request (Jan 2025 - Feb 2026)
     # In production, use datetime.now() logic
     FROM_DATE = "2025-01-01"
-    TO_DATE = "2026-02-05" 
+    TO_DATE = "2026-03-04" 
     
-    for i, key in enumerate(instrument_keys):
+    for i, key in enumerate(target_keys):
         try:
-            response = api_instance.get_historical_candle_data1(
+            response = history_api.get_historical_candle_data1(
                 key,
                 "months", 
                 "1", 
@@ -110,7 +124,7 @@ def fetch_historical_data(instrument_keys):
             if response.status == 'success' and response.data and response.data.candles:
                 candle_data.append({
                     "instrument_key": key,
-                    "payload": response.to_dict() # Serialize for storage/printing
+                    "candles": response.data.candles # Serialize for storage/printing
                 })
             else:
                 print(f"Warning: No data for {key}")
@@ -121,31 +135,86 @@ def fetch_historical_data(instrument_keys):
         # Rate Limiting: Sleep to avoid hitting API limits
         time.sleep(0.2) 
         
-        if (i + 1) % 10 == 0:
-            print(f"Processed {i + 1}...")
-
+        
     print("Data fetch complete.")
     return candle_data
 
-def main():
-    if not ACCESS_TOKEN:
-        print("Error: UPSTOX_ACCESS_TOKEN not found in .env. Please authenticate first.")
-        # In a real app, trigger the login flow here
-        return
+def get_ltp(target_keys):
 
-    # 1. Get List of Keys
-    keys = get_target_instrument_keys()
-    
-    # 2. Fetch Data
-    if keys:
-        history_data = fetch_historical_data(keys)
+    ltp_with_names = {}
+
+    print("Fetching Live LTP...")
+
+    for instrument_key in target_keys:
         
-        # 3. Summary
-        print(f"\n--- Summary ---")
-        print(f"Fetched valid data for {len(history_data)} instruments.")
-        if history_data:
-            print("Sample Entry Key:", history_data[0]['instrument_key'])
-            # Here you would typically save this to a file or pass to the LLM
-            
-if __name__ == "__main__":
-    main()
+        try:
+            # For a single instrument
+            response = market_api.get_ltp(instrument_key=instrument_key)
+            actual_keys = list(response.data.keys())
+            ltp_with_names[instrument_key] = response.data[actual_keys[0]].last_price
+
+        except Exception as e:
+            # Using generic Exception to catch all
+            print(f"Exception when calling MarketQuoteApi->get_ltp: {e}")
+
+    print(f"Fetched LTP for {len(ltp_with_names)} instruments.")
+    return ltp_with_names
+
+
+# Create a Global Cache Dictionary
+STOCK_CACHE = {
+    "target_keys": [],
+    "history_data": []
+}
+
+@app.on_event("startup")
+def preload_historical_data():
+    if not ACCESS_TOKEN:
+        print("Error: UPSTOX_ACCESS_TOKEN not found! Cannot fetch data.")
+        return
+        
+    print("Pre-fetching 1-year historical data...")
+    target_keys = get_target_instrument_keys()
+    
+    # Save to global cache so all users can read it instantly
+    STOCK_CACHE["target_keys"] = target_keys
+    STOCK_CACHE["history_data"] = fetch_historical_data(target_keys)
+    print("Historical Cache populated successfully!")
+
+
+# 3. Fix your Endpoint to use the cache
+class input_type(BaseModel):
+    amount: int
+    time: int
+
+@app.post("/analyze")
+def analyze_data(user_input: input_type):
+    # Retrieve the heavy, static data from our RAM cache instantly (0 latency)
+    target_keys = STOCK_CACHE["target_keys"]
+    history_data = STOCK_CACHE["history_data"]
+    
+    if not target_keys:
+        return {"error": "Server is still loading stock data or authentication failed."}
+
+    # Fetch ONLY the super-fast live price right now, because it changes every second
+    ltp_with_names = get_ltp(target_keys)
+    
+    prompt = f"Analyze these stocks given amount and time to invest\n\n amount :{user_input.amount} and time is {user_input.time} months\n\n\n make sure you use few words in 2 lines\n\n"
+
+    for candle_data in history_data:
+        instrument_key = candle_data['instrument_key']
+        candles = candle_data['candles']
+        ltp = ltp_with_names.get(instrument_key) # Current Price
+        
+        # all the analysis part
+        # Calculate returns and trend...
+        closes = [c[4] for c in candles] 
+        start_price = closes[-1]
+        ret_1y = ((ltp - start_price) / start_price) * 100
+        avg_3m = sum(closes[:3]) / 3
+        trend = "BULLISH" if ltp > avg_3m else "BEARISH"
+        
+        prompt += f"Stock: {instrument_key} | Price: {ltp} | 1Y Return: {ret_1y:.2f}% | Trend: {trend}\n"
+    
+    return llm.invoke(prompt).content
+
