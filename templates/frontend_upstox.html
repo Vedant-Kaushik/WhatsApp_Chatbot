@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upstox Stock Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        .result h2 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        .result p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upstox Stock Analysis</h1>
+    <form action="analyze" method="post">
+        <label>Amount (₹):</label>
+        <input type="number" name="amount" value="{{ amount if amount else '' }}" required>
+        <br>
+        <label>Time (months):</label>
+        <input type="number" name="time" value="{{ time if time else '' }}" required>
+        <br>
+        <button type="submit">Analyze</button>
+    </form>
+    
+    {% if result %}
+    <div class="result" style="margin-top: 20px; padding: 20px; background-color: #e8f4f8; border-left: 5px solid #007bff; border-radius: 8px;">
+        <h2 style="color: #007bff; margin-top: 0;">AI Technical Verdict</h2>
+        <p style="font-size: 16px; white-space: pre-wrap;">{{ result }}</p>
+    </div>
+    {% endif %}
+
+    {% if candlestick_chart %}
+    <div class="result" style="margin-top: 30px; padding: 20px; border: 1px solid #ccc; background-color: #fff; border-radius: 8px;">
+        <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Technical Indicator Visuals</h2>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+            <strong style="font-size: 16px;">Chart Legend:</strong>
+            <ul style="margin-top: 5px; list-style-type: none; padding-left: 0;">
+                <li style="margin-bottom: 5px;"><strong>Prices (Candlesticks):</strong> The main visual showing Open, High, Low, Close prices.</li>
+                <li style="margin-bottom: 5px;"><strong style="color: #ff8c00;">Orange Solid Line (3-Month SMA):</strong> The 3-Month Simple Moving Average trend line.</li>
+                <li style="margin-bottom: 5px;"><strong style="color: #28a745;">Green Dashed Line (Support):</strong> The lowest price of the last 6 months (Floor).</li>
+                <li style="margin-bottom: 5px;"><strong style="color: #dc3545;">Red Dashed Line (Resistance):</strong> The highest price of the last 6 months (Ceiling).</li>
+                <li style="margin-bottom: 5px;"><strong style="color: #20c997;">Bottom Sub-Chart (Volume Trend):</strong> The number of shares traded per month.</li>
+            </ul>
+        </div>
+
+        {{ candlestick_chart | safe }}
+    </div>
+    {% endif %}
+
+</body>
+</html>

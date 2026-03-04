@@ -18,15 +18,6 @@ import psycopg
 import os,time
 import shutil
 import json
-import logging
-
-# ==========================================
-# WhatsApp Bot Core Architecture
-# - FastAPI Server with Pywa webhook routing
-# - LangGraph state management & LTM memory
-# - ChromaDB for persistent PDF embeddings
-# ==========================================
-
 import PyPDF2
 from typing import List
 from pydantic import BaseModel, Field
