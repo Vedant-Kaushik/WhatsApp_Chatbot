@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.env
+temp_downloads/
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Notebooks (optional, but keeping based on user scratch file)
+test.ipynb
+
+# User Requested Exclusions (Do not push)
+# pyproject.toml
+# uv.lock
+# .gitignore
+.python-version
+conversation.db
+conversation.db-shm
+conversation.db-wal
+.dockerignore
+vector_stores/
+test_upstox.ipynb
+upstox_clean.ipynb
+assets/
