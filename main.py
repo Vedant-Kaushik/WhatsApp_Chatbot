@@ -47,7 +47,6 @@ wa = WhatsApp(
     phone_id=os.getenv("PHONE_ID"),
     token=os.getenv("WHATSAPP_TOKEN"),
     server=app,
-    callback_url=os.getenv("CALLBACK_URL"),
     verify_token=os.getenv("VERIFY_TOKEN"),
     app_id=int(os.getenv("APP_ID")),
     app_secret=os.getenv("APP_SECRET"),
