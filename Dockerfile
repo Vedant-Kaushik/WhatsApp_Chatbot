@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir uv
 RUN uv sync
 
 # Expose the application port
-EXPOSE 5173
+EXPOSE 7860
 
 # Run the FastAPI application using uv
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5173"]
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
