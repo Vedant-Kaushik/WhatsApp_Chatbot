@@ -28,7 +28,7 @@ from langgraph.store.postgres import PostgresStore
 
 load_dotenv()
 
-DB_URI="postgresql://postgres:postgres@localhost:5432/postgres"
+DB_URI = os.getenv("DB_URI", "postgresql://postgres:postgres@localhost:5432/postgres")
 conn = psycopg.connect(DB_URI, autocommit=True)
 checkpoint = PostgresSaver(conn)
 checkpoint.setup()
