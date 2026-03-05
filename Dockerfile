@@ -13,8 +13,11 @@ RUN pip install --no-cache-dir uv
 # Install dependencies
 RUN uv sync
 
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
 # Expose the application port
 EXPOSE 7860
 
-# Run the FastAPI application using uv
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Use entrypoint script to fix DNS at runtime before starting the app
+CMD ["./entrypoint.sh"]
