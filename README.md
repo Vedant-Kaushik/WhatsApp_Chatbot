@@ -1,3 +1,12 @@
+---
+title: Vedant Megabot
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 # Enterprise AI Chatbot for WhatsApp
 
 **The Easiest, Most Powerful Way to Deploy AI on WhatsApp.**
