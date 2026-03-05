@@ -330,7 +330,7 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
     history_data = STOCK_CACHE["history_data"]
     
     if not target_keys:
-        return {"error": "Server is still loading stock data or authentication failed."}
+        return RedirectResponse(url="/upstox/", status_code=302)
 
     # Fetch ONLY the super-fast live price right now, because it changes every second
     ltp_with_names = get_ltp(target_keys)
