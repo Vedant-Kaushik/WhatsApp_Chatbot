@@ -4,7 +4,7 @@
 from pywa import WhatsApp, types, filters
 from fastapi import FastAPI
 from dotenv import load_dotenv
-from upstox_analysis import app as upstox_app
+from upstox_analysis import app as upstox_app, preload_historical_data
 from langchain_google_genai import ChatGoogleGenerativeAI,GoogleGenerativeAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage, BaseMessage,RemoveMessage
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -41,7 +41,17 @@ store.setup()
 # ============================================
 # 2. INITIALIZATION (App, LLM, DB)
 # ============================================
-app = FastAPI()
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("====== MAIN APP STARTUP ======")
+    print("Triggering Upstox data preload...")
+    preload_historical_data()
+    yield
+    print("====== MAIN APP SHUTDOWN ======")
+
+app = FastAPI(lifespan=lifespan)
 app.mount("/upstox", upstox_app, name="upstox")
 wa = WhatsApp(
     phone_id=os.getenv("PHONE_ID"),
