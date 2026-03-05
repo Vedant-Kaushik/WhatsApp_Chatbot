@@ -214,7 +214,10 @@ def handle_pdf(_: WhatsApp, msg: types.Message):
         return
 
     # 3. Mark read & Type
-    msg.mark_as_read()
+    try:
+        msg.mark_as_read()
+    except Exception:
+        pass  # Gracefully handle DNS failures on HF
     msg.indicate_typing()
     msg.reply("I received your document! Analyzing it now...")
     
@@ -267,7 +270,10 @@ def Chatting(_: WhatsApp, msg: types.Message):
     config={"configurable": {"thread_id": thread_id}}
 
     # mark as read and show typing indicator
-    msg.mark_as_read()
+    try:
+        msg.mark_as_read()
+    except Exception:
+        pass  # Gracefully handle DNS failures on HF
     msg.indicate_typing()
 
     if msg.text == "clear":

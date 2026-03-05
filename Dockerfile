@@ -4,10 +4,6 @@ FROM python:3.13-slim
 # Set working directory
 WORKDIR /app
 
-# Fix DNS resolution for Hugging Face Docker containers
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf && \
-    echo "nameserver 8.8.4.4" >> /etc/resolv.conf
-
 # Copy project files
 COPY . /app
 
