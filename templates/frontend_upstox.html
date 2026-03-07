@@ -94,6 +94,33 @@
             color: #333;
             font-weight: bold;
             text-align: center;
+            padding: 0 15px; /* Add padding for mobile */
+        }
+        
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 24px;
+            }
+            input, button {
+                font-size: 14px;
+                padding: 10px;
+            }
+            .result {
+                padding: 15px;
+            }
+            .result h2 {
+                font-size: 20px;
+            }
+            .result p {
+                font-size: 14px !important; /* Force smaller text on mobile */
+            }
         }
     </style>
 </head>
