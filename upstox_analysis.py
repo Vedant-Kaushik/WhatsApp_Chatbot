@@ -145,7 +145,6 @@ def fetch_historical_data(target_keys):
     return candle_data
 
 def get_ltp(target_keys):
-
     ltp_with_names = {}
 
     print("Fetching Live LTP...")
@@ -336,18 +335,6 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
     # Fetch ONLY the super-fast live price right now, because it changes every second
     ltp_with_names = get_ltp(target_keys)
     
-    prompt = f"""You are a professional, objective financial analyst writing a brief report for a beginner.
-The client wants to invest ₹{amount} for {time} months. 
-I am going to provide you with the technical numbers for a top-performing stock on the market right now.
-DO NOT use complicated financial jargon (like SMA, Support, Resistance, ATR, or Moving Averages).
-Instead, translate these numbers into a clear, professional summary. Explain the stock's recent performance, the potential risks involved (based on volatility), and the current momentum (based on volume).
-Keep your tone authoritative but accessible. Do not use slang, emojis, or overly enthusiastic words like 'superstar' or 'rollercoaster'. Keep it to 3-4 concise sentences.
-
-CRITICAL INSTRUCTION: You MUST explicitly include a transitional sentence like "I have plotted a detailed visual graph for you below" or "Please refer to the chart I generated below for a visual breakdown." Make it sound like a natural part of a professional report.
-
-DATA:
-"""
-
     stock_metrics = []
     
     for candle_data in history_data:
@@ -371,15 +358,35 @@ DATA:
     
     # Sort to find the best 1Y return
     stock_metrics.sort(key=lambda x: x['ret_1y'], reverse=True)
-    top_performers = stock_metrics[:5]
+    top_20 = stock_metrics[:20]
     
-    for s in top_performers:
-        prompt += f"Stock: {s['key']} | Price: {s['ltp']} | 1Y Return: {s['ret_1y']:.2f}% | Trend: {s['trend']} | Support: {s['support']} | Resistance: {s['resistance']} | Volatility (ATR): {s['atr']:.2f} | Volume Trend: {s['vol_trend']}\n"
-    
-    # -- Generate Plotly HTML Snippet for the #1 Top Performer --
-    best_stock = top_performers[0]
+    if not top_20:
+        raise Exception("No market data could be fetched from Upstox. Please try again later.")
+
+    if time < 12:
+        # Short-term: Prioritize low volatility (lowest ATR)
+        best_stock = min(top_20, key=lambda x: x['atr'])
+        reason = "lowest volatility (safest) among top performers, making it ideal for a short-term horizon"
+    else:
+        # Long-term: Prioritize highest 1-year return
+        best_stock = max(top_20, key=lambda x: x['ret_1y'])
+        reason = "highest 1-year return, making it ideal for maximizing long-term growth"
+
     stock_name = best_stock['key'].split('|')[-1]
+
+    prompt = f"""You are a professional, objective financial analyst advising a client.
+The client wants to invest ₹{amount} for {time} months. 
+Based on this criteria, my system has selected {stock_name} because it has the {reason}.
+
+Here are the technical numbers for {stock_name}:
+Price: {best_stock['ltp']} | 1Y Return: {best_stock['ret_1y']:.2f}% | Trend: {best_stock['trend']} | Volatility (ATR): {best_stock['atr']:.2f}
+
+Write a 3-4 sentence professional summary explaining why this stock ({stock_name}) is a good fit for their specific investment amount (₹{amount}) and time horizon ({time} months). 
+Keep your tone authoritative but accessible. Do not use complicated jargon or emojis.
+CRITICAL INSTRUCTION: You MUST explicitly include a transitional sentence at the end like "Please refer to the chart I generated below for a visual breakdown." and "Tell user ok your amount and time are <amount> and <time> "
+"""
     
+    # -- Generate Plotly HTML Snippet for the selected stock --
     candlestick_html = generate_professional_chart(stock_name, best_stock['candles'], best_stock)
     
     result = llm.invoke(prompt).content
