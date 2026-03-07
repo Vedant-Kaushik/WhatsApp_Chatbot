@@ -64,11 +64,42 @@
             margin: 5px 0;
             line-height: 1.6;
         }
+
+        /* Loading Overlay Styles */
+        #loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #007bff;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+            font-weight: bold;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <h1>Upstox Stock Analysis</h1>
-    <form action="analyze" method="post">
+    <form action="analyze" method="post" onsubmit="showLoading()">
         <label>Amount (₹):</label>
         <input type="number" name="amount" value="{{ amount if amount else '' }}" required>
         <br>
@@ -77,6 +108,25 @@
         <br>
         <button type="submit">Analyze</button>
     </form>
+    
+    <!-- Full Screen Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-text">
+            Fetching live prices for 100+ stocks...<br>
+            Running AI Technical Analysis.<br><br>
+            <span style="color: #007bff; font-size: 14px;">This may take up to 1-2 minutes. Please do not close or refresh the page!</span>
+        </div>
+    </div>
+
+    <script>
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            // Disable the Submit button to prevent double-clicks
+            document.querySelector('button[type="submit"]').disabled = true;
+            document.querySelector('button[type="submit"]').innerText = 'Analyzing...';
+        }
+    </script>
     
     {% if result %}
     <div class="result" style="margin-top: 20px; padding: 20px; background-color: #e8f4f8; border-left: 5px solid #007bff; border-radius: 8px;">

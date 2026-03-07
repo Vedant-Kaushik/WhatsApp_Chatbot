@@ -1,9 +1,11 @@
 ---
-title: Vedant Megabot
+title: Vedant upstox
 emoji: 🚀
 colorFrom: blue
 colorTo: indigo
 sdk: docker
+dockerfile: Dockerfile.upstox
+app_port: 8000
 pinned: false
 ---
 
