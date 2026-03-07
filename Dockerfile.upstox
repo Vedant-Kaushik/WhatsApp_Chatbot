@@ -4,6 +4,9 @@ FROM python:3.13-slim
 # Set working directory
 WORKDIR /app
 
+# Ensure Python output is logged immediately in Hugging Face
+ENV PYTHONUNBUFFERED=1
+
 # Copy project files
 COPY . /app
 
