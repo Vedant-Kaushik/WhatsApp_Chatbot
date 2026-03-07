@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import FastAPI, Request, Form
+from datetime import datetime
 
 # Load Environment Variables
 load_dotenv()
@@ -113,7 +114,7 @@ def fetch_historical_data(target_keys):
     # Note: Hardcoded dates as per user request (Jan 2025 - Feb 2026)
     # In production, use datetime.now() logic
     FROM_DATE = "2025-01-01"
-    TO_DATE = "2026-03-04" 
+    TO_DATE = datetime.now().strftime("%Y-%m-%d")
     
     for i, key in enumerate(target_keys):
         try:
