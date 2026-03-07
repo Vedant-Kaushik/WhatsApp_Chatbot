@@ -18,7 +18,8 @@ echo " Staging files..."
 git add upstox_analysis.py
 git add templates/frontend_upstox.html
 git add README.md
-git add Dockerfile.upstox
+cp Dockerfile.upstox Dockerfile
+git add Dockerfile
 git add pyproject.toml
 git add uv.lock
 git add .python-version
