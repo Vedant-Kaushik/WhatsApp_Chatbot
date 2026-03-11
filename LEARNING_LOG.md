@@ -954,15 +954,15 @@ When sending millions of notifications (Emails, SMS, Push), APIs will inevitably
 
 ```mermaid
 graph LR
-    Producer[API] --> MainQ[(Main Queue)]
-    MainQ --> Worker[Notification Worker]
-    
-    Worker -->|Success| Done((Delivered))
-    Worker -->|Failure 1-4| Wait[Exponential Backoff]
-    Wait -->|Retry| MainQ
-    
-    Worker -->|Failure 5 (Max)| DLQ[(Dead Letter Queue)]
-    DLQ --> Admin[Manual Inspection / Debugging]
+    Producer[API] --> MainQ["Main Queue"]
+    MainQ --> Worker["Notification Worker"]
+
+    Worker -- Success --> Done["Delivered"]
+    Worker -- "Failure 1-4" --> Wait["Exponential Backoff"]
+    Wait -- Retry --> MainQ
+
+    Worker -- "Failure 5 (Max)" --> DLQ["Dead Letter Queue"]
+    DLQ --> Admin["Manual Inspection / Debugging"]
 ```
 
 *   **Why?**:
