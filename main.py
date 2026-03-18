@@ -25,6 +25,7 @@ from typing import Literal
 from langgraph.store.base import BaseStore
 from langchain_core.runnables import RunnableConfig
 from langgraph.store.postgres import PostgresStore
+from langchain_tavily import TavilySearch
 
 load_dotenv()
 
@@ -85,6 +86,10 @@ memory_extractor = llm.with_structured_output(MemoryDecision)
 
 MEMORY_PROMPT = data['memory_prompt']
 
+tool = TavilySearch(
+    max_results=5,
+    topic="general",
+)
 # ============================================
 # 3. HELPER FUNCTIONS (Utilities)
 # ============================================
