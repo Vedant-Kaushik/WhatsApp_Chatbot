@@ -297,7 +297,10 @@ def Chatting(_: WhatsApp, msg: types.Message):
     # i need to pass meesage i here for remember node name space
     response = chat_bot.invoke(input_state, config=config)["messages"][-1].content
 
-    msg.reply(response)
+    if(type(response)==str): 
+        msg.reply(response)
+    else:
+        msg.reply(response[0]['text'])
 
 
 # ============================================
