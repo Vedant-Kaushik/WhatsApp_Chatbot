@@ -13,6 +13,7 @@ from langchain_core.prompts import PromptTemplate
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, START,END
 from langgraph.prebuilt import ToolNode
+from langchain.tools import tool
 from typing import TypedDict, Annotated
 import psycopg
 import os,time
@@ -86,9 +87,11 @@ memory_extractor = llm.with_structured_output(MemoryDecision)
 
 MEMORY_PROMPT = data['memory_prompt']
 
-tool = TavilySearch(
-    max_results=5,
+search_tool = TavilySearch(
+    max_results=3,
     topic="general",
+    include_images=False,
+    include_image_descriptions=False,
 )
 # ============================================
 # 3. HELPER FUNCTIONS (Utilities)
@@ -310,6 +313,14 @@ class state_chatbot(TypedDict):
 class summary_messages(state_chatbot): #inherits from state_chatbot
     summary:str
 
+@tool
+def web_search(query:str):
+    """Search the web for information."""
+    results= search_tool.invoke({"query": query})
+    best_result = max(results['results'], key=lambda x: x['score'])
+    return f"for title: {best_result['title']} \n\n from source: {best_result['url']} \n\n the content is: {best_result['content']}"
+
+llm = llm.bind_tools([web_search])
 
 def chatbot(state:summary_messages,config :RunnableConfig,store:BaseStore):
 
@@ -358,9 +369,17 @@ def summarize_conversation(state:summary_messages):
         "messages":[RemoveMessage(id=m.id) for m in message_to_delete],
     }
 
-def should_summarize(state:summary_messages):
 
-    return len(state["messages"])>10 # consedering llm gives long answers
+def search_summarizer_checker(state:summary_messages):
+    last_message = state["messages"][-1]
+    # Check 1: Does the LLM want to call a tool?
+    if last_message.tool_calls:
+        return "tools"
+    # Check 2: Should we summarize?
+    if len(state["messages"]) > 10:
+        return "summarize"
+    return "end"
+
 
 def remember_node(state: summary_messages, config: RunnableConfig,  store: BaseStore):
 
@@ -398,21 +417,24 @@ def Chatflow():
     graph.add_node("remember", remember_node)
     graph.add_node('chatbot',chatbot)
     graph.add_node('summarize_conversation',summarize_conversation)
+    graph.add_node("tools", ToolNode([web_search]))
 
     graph.add_edge(START,'remember')
     graph.add_edge("remember","chatbot")
     graph.add_conditional_edges(
         'chatbot',
-        should_summarize,
+        search_summarizer_checker,
         {
-            True:"summarize_conversation",
-            False:END
+            "tools": "tools",
+            "summarize": "summarize_conversation",
+            "end": END
         }
     )
+    graph.add_edge("tools", "chatbot")
     graph.add_edge('summarize_conversation',END)
     
     workflow = graph.compile(checkpointer=checkpoint,store=store)
-
+    print (workflow)
     return workflow
 
 chat_bot=Chatflow()
