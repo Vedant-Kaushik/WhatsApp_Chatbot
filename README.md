@@ -62,6 +62,12 @@ If you prefer to run it yourself, this codebase is open-source and developer-fri
 - Persistent storage: Ask unlimited questions about the same document
 - Smart routing: LLM decides when to query the PDF vs. general chat
 
+#### 🌐 **Real-Time Web Search**
+- Integrated Tavily search engine for live internet access 
+- AI agent autonomously decides when to search the web for current events or missing knowledge
+- Extracts, summarizes, and formats answers directly from live sources
+- Powered by LangGraph's dynamic ToolNode routing mechanism
+
 #### 🧠 **Intelligent Memory Management**
 - **Conversation Summarization**: After 10+ messages, old messages are summarized and compressed
 - **Infinite Context**: Never lose conversation history, even in long chats
@@ -180,8 +186,6 @@ We are constantly learning and exploring new system architectures to make this b
 2.  **Cloud & Scalability Exploration**:
     *   Investigating Cloud-Native deployments to support more users efficiently.
     *   Learning system design concepts like distributed queues for handling complex tasks in the background.
-
-    *   Allowing the bot to perform real-world actions (web search, data lookup) to be more helpful.
     
 4.  **📈 Coming Soon: AI Investment Analyst (Upstox)**
     We are building a powerful **Investment Advice Engine** directly into WhatsApp.
