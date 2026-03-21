@@ -437,7 +437,6 @@ def Chatflow():
     graph.add_edge('summarize_conversation',END)
     
     workflow = graph.compile(checkpointer=checkpoint,store=store)
-    print (workflow)
     return workflow
 
 chat_bot=Chatflow()
