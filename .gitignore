@@ -58,3 +58,6 @@ vector_stores/
 test_upstox.ipynb
 upstox_clean.ipynb
 assets/
+!assets/langgraph_architecture.png
+tavily.ipynb
+*.ipynb

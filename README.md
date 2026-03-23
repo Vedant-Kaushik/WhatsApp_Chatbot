@@ -18,11 +18,13 @@ Turn your WhatsApp business number into a 24/7 intelligent agent. Whether you ar
 ## 🚀 Why This Chatbot?
 
 *   **Zero-Friction Setup**: The database initializes automatically on the first run. No complex migrations or SQL scripts needed.
-*   **Human-Like Intelligence**: Powered by a State-of-the-Art Large Language Model (LLM), it understands context, nuance, and intent better than traditional rule-based bots.
+*   **Human-Like Intelligence**: Powered by Google's **Gemini 2.5 Flash**, it understands context, nuance, and intent better than traditional rule-based bots.
 *   **Beautiful Responses**: Sends perfectly formatted messages with bold text, lists, and tables that look professional on mobile and desktop.
 *   **PDF Document Analysis**: Send any PDF to the bot, and it will instantly read, understand, and answer questions based on its content.
-*   **Smart Memory**: Remembers conversation history for seamless follow-ups. Reset memory instantly with our simpler commands.
-*   **Reliable**: Built on a modern, high-concurrency framework.
+*   **Real-Time Web Search**: Autonomously searches the internet via Tavily when it needs up-to-date information.
+*   **Long-Term Memory**: Permanently remembers user-specific facts across conversations using PostgreSQL-backed memory extraction.
+*   **Smart Conversation Management**: Automatically summarizes long conversations to maintain infinite context without losing history.
+*   **Reliable**: Built on FastAPI, a modern, high-concurrency framework.
 
 ---
 
@@ -35,8 +37,7 @@ We offer a fully managed **Premium Cloud Tier** for business owners and non-tech
 *   **We Host Everything**: You just scan a QR code or provide your number.
 *   **No Technical Headache**: We handle the technical setup; you handle your customers.
 *   **Cost**: **~$25 USD / month** (Base Hosting).
-*   **Custom Integrations**: connecting the bot to *your* specific database, calendar, or CRM is available as a **premium customization service**.
-
+*   **Custom Integrations**: Connecting the bot to *your* specific database, calendar, or CRM is available as a **premium customization service**.
 
 **[Contact us](#)** to get started with the Hosted Tier today.
 
@@ -48,47 +49,57 @@ If you prefer to run it yourself, this codebase is open-source and developer-fri
 
 ### Tech Stack
 *   **Framework**: FastAPI (High-performance Python web framework)
-*   **AI Engine**: Advanced LLM (Abstracted via LangChain/LangGraph)
-*   **Database**: PostgreSQL (Stores conversation history, user threads, and memory checkpoints)
+*   **AI Model**: Google Gemini 2.5 Flash (via LangChain)
+*   **Orchestration**: LangGraph (Stateful agent with tool routing, memory, and summarization)
+*   **Database**: PostgreSQL (Conversation checkpoints, long-term memory store)
 *   **Vector Store**: ChromaDB (Persistent PDF embeddings on disk)
-*   **Integration**: PyWa (Verified WhatsApp APIs)
+*   **Web Search**: Tavily (Real-time internet search)
+*   **WhatsApp Integration**: PyWa (Verified WhatsApp Business APIs)
+*   **Package Manager**: uv
 *   **Containerization**: Docker & Docker Compose
 
 ### Key Features
 
-#### 📄 **PDF Document Analysis**
+#### 📄 PDF Document Analysis
 - Upload any PDF to the bot
-- Automatic text extraction and vectorization
+- Automatic text extraction and vectorization using ChromaDB
 - Persistent storage: Ask unlimited questions about the same document
 - Smart routing: LLM decides when to query the PDF vs. general chat
+- MMR-based retrieval for diverse, relevant results
 
-#### 🌐 **Real-Time Web Search**
-- Integrated Tavily search engine for live internet access 
+#### 🌐 Real-Time Web Search
+- Integrated Tavily search engine for live internet access
 - AI agent autonomously decides when to search the web for current events or missing knowledge
 - Extracts, summarizes, and formats answers directly from live sources
 - Powered by LangGraph's dynamic ToolNode routing mechanism
 
-#### 🧠 **Intelligent Memory Management**
+#### 🧠 Intelligent Memory Management
 - **Conversation Summarization**: After 10+ messages, old messages are summarized and compressed
 - **Infinite Context**: Never lose conversation history, even in long chats
 - **Thread-based Memory**: Each user has isolated conversation threads
-- **Advanced Long-Term Memory (LTM)**: Uses `PostgresStore` to extract and permanently save factual details about the user, routed dynamically via WhatsApp's native `msg.id`.
-- **Customizable Personas**: All system prompts (like the core Gentleman AI persona and Memory Extractor) are fully decoupled into an easy-to-edit `prompts.json` file.
+- **Long-Term Memory (LTM)**: Uses `PostgresStore` to extract and permanently save factual details about the user (identity, preferences, goals), routed dynamically via WhatsApp's native `msg.id`
+- **Customizable Personas**: All system prompts (core Gentleman AI persona, Memory Extractor, PDF Analyst) are fully decoupled into an easy-to-edit `prompts.json` file
 
-#### 🎯 **Production-Ready**
+#### 🎯 Production-Ready
 - PostgreSQL for reliable state management
-- Automatic database initialization
+- Automatic database and checkpoint table initialization
 - Docker Compose for one-command deployment
+- Message deduplication to prevent duplicate responses
+
+### Architecture
+
+![LangGraph Architecture](assets/langgraph_architecture.png)
 
 ### Fast Setup
 
 **1. Prerequisites**
 *   Git
+*   Python 3.13+ & [uv](https://docs.astral.sh/uv/)
 *   Docker (Optional, but recommended)
 *   A Meta Developer Account & WhatsApp Business API credentials
 
 **2. Get Credentials**
-You need to fill the `.env` file with secrets from Meta and Google.
+You need to fill the `.env` file with secrets from Meta, Google, and Tavily.
 
 *   **Meta/Facebook Developers**:
     1.  Go to [Meta Developers](https://developers.facebook.com/).
@@ -107,6 +118,10 @@ You need to fill the `.env` file with secrets from Meta and Google.
     1.  Get your API Key from [Google AI Studio](https://aistudio.google.com/).
     2.  This goes into `GOOGLE_API_KEY`.
 
+*   **Tavily**:
+    1.  Get your API Key from [Tavily](https://tavily.com/).
+    2.  This goes into `TAVILY_API_KEY`.
+
 **3. Clone & Configure**
 ```bash
 git clone https://github.com/Vedant-Kaushik/WhatsApp_Chatbot.git
@@ -115,13 +130,21 @@ cd Whatsapp_chatbot
 
 Create a `.env` file (do not use quotes):
 ```env
+# WhatsApp / Meta
 PHONE_ID=your_phone_id
 WHATSAPP_TOKEN=your_token
 CALLBACK_URL=https://your-domain.com
 VERIFY_TOKEN=your_verify_token
 APP_ID=your_app_id
 APP_SECRET=your_app_secret
-GOOGLE_API_KEY=your_ai_api_key
+WABA_ID=your_whatsapp_business_account_id
+
+# AI & Search
+GOOGLE_API_KEY=your_google_ai_key
+TAVILY_API_KEY=your_tavily_api_key
+
+# Database (only needed for local dev without Docker)
+DB_URI=postgresql://postgres:postgres@localhost:5432/postgres
 ```
 
 **4. Run with Docker Compose (Recommended)**
@@ -149,54 +172,70 @@ If you have Python and PostgreSQL installed:
 # 2. Create database
 psql -U postgres -c "CREATE DATABASE postgres;"
 
-# 3. Install dependencies and set up environment
+# 3. Install dependencies
 uv sync
 
-# 4. Run the development server (auto-reloads and ignores .venv)
-uv run dev
+# 4. Run the server
+uv run uvicorn main:app --host 0.0.0.0 --port 5173
 
 # 5. In a separate terminal, start ngrok
 ngrok http 5173
 ```
-> **Note**: Update `DB_URI` in `main.py` if your PostgreSQL credentials differ from the default.
+> **Note**: Update `DB_URI` in your `.env` if your PostgreSQL credentials differ from the default.
 
 ---
 
-## 🔌 API Documentation
+## 📈 AI Investment Analyst (Upstox)
+
+A separate module that provides AI-powered stock analysis directly via a web interface.
+
+**How it works:**
+1.  **Smart Filter**: Scans the **Nifty 50** (Top 50 Indian companies by market cap).
+2.  **Affordability Check**: You enter your investment budget and the bot filters out stocks above your budget.
+3.  **Liquidity Sort**: Picks the most liquid/active stocks to ensure safety.
+4.  **Deep-Dive Analysis**: Fetches **6 months of daily candles** (historical data) for shortlisted stocks.
+5.  **LLM Verdict**: Gemini 2.5 Flash analyzes the chart patterns and gives a clear **Buy/Hold/Avoid** rating with reasons.
+
+**Run the Upstox module:**
+```bash
+uv run uvicorn upstox_analysis:app --host 0.0.0.0 --port 8000
+```
+
+**Additional `.env` variables for Upstox:**
+```env
+UPSTOX_API_KEY=your_upstox_api_key
+UPSTOX_API_SECRET=your_upstox_api_secret
+UPSTOX_REDIRECT_URI=your_redirect_uri
+UPSTOX_ACCESS_TOKEN=your_access_token
+```
+
+---
+
+## 🔌 API Reference
 
 ### `POST /clear`
-**Description**: Resets the conversation memory for a specific user.
-**Usage**: Useful for testing or when a user wants to start a fresh topic.
-**Payload**:
+Resets the conversation memory for a specific user.
+
+**Payload:**
 ```json
 {
   "user_id": "wa_phone_number"
 }
 ```
 
+### WhatsApp Commands
+| Command | Description |
+|---------|-------------|
+| `clear` | Reset conversation history, PDF memory, and long-term memory |
+| Send a PDF | Bot analyzes the document and answers questions about it |
+| Any text | Normal conversation with the AI assistant |
+
 ---
 
-##  Future Scope & Roadmap
+## Future Roadmap
 
-We are constantly learning and exploring new system architectures to make this bot even better.
-
-1.  **Omnichannel Support**:
-    *   Bringing this same intelligent experience to Telegram and other chat apps, keeping WhatsApp as the primary interface.
-
-2.  **Cloud & Scalability Exploration**:
-    *   Investigating Cloud-Native deployments to support more users efficiently.
-    *   Learning system design concepts like distributed queues for handling complex tasks in the background.
-    
-4.  **📈 Coming Soon: AI Investment Analyst (Upstox)**
-    We are building a powerful **Investment Advice Engine** directly into WhatsApp.
-    
-    **The Logic (Already Designed):**
-    1.  **Smart Filter**: Scans the **Nifty 500** (Top 500 Indian companies) instead of random junk stocks.
-    2.  **Affordability Check**: You type "Invest ₹50k". The bot instantly filters out stocks way above your budget (like MRF).
-    3.  **Liquidity Sort**: Picks the Top 5 most liquid/active stocks to ensure safety.
-    4.  **Deep-Dive Analysis**: Fetches **6 Months of Daily Candles** (History) for the shortlisted stocks.
-    5.  **LLM Verdict**: The AI analyzes the chart patterns and gives you a clear **Buy/Hold/Avoid** rating with reasons.
-    
-    *Goal: To give you a Hedge Fund Analyst in your pocket.*
+1.  **Omnichannel Support**: Bringing the same intelligent experience to Telegram and other chat platforms.
+2.  **Cloud & Scalability**: Investigating cloud-native deployments with distributed queues for background task processing.
+3.  **Upstox WhatsApp Integration**: Bringing the investment analyst directly into WhatsApp conversations.
 
 ---
