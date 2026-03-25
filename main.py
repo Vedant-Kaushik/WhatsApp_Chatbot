@@ -20,6 +20,7 @@ import os,time
 import shutil
 import json
 import PyPDF2
+from datetime import datetime
 from typing import List
 from pydantic import BaseModel, Field
 from typing import Literal
@@ -337,7 +338,7 @@ def chatbot(state:summary_messages,config :RunnableConfig,store:BaseStore):
 
     # Inject LTM context into the unified system prompt from prompts.json
     system_msg = SystemMessage(
-        content=data["system_prompt"].format(user_details_content=user_details or "(empty)")
+        content=data["system_prompt"].format(user_details_content=user_details or "(empty)")+f"\n\n todays date is {datetime.now().date()}, and time is {datetime.now().time()}",        
     )
 
     if state.get('summary'):
