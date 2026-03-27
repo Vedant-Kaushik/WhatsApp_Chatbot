@@ -199,6 +199,40 @@ def get_pdf_context(vector_store, query: str):
 # 5. MESSAGE HANDLERS (WhatsApp)
 # ============================================
 
+@wa.on_message(filters.image)
+def handle_image(client: WhatsApp, msg: types.Message):
+    """Handle incoming image messages — no disk storage needed."""
+    
+    thread_id=f"whatsapp_{msg.from_user.wa_id}_{msg.from_user.name}"
+    config = {"configurable": {"thread_id": thread_id}}
+
+    # Download image bytes directly into memory
+    image_bytes = msg.image.download(in_memory=True)
+    
+    import base64
+    image_data = base64.b64encode(image_bytes).decode()
+    mime = msg.image.mime_type or "image/jpeg"
+    
+    # Pass to Gemini 2.5 Flash as multimodal message
+    human_msg = HumanMessage(content=[
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:{mime};base64,{image_data}"}
+        },
+        {
+            "type": "text",
+            "text": msg.caption or "Analyse this image and describe what you see."
+        }
+    ])
+    
+    result = chat_bot.invoke({"messages": [human_msg]}, config=config)
+    reply = result["messages"][-1].content
+    
+    if(type(reply)==str): 
+        msg.reply(reply)
+    else:
+        msg.reply(reply[0]['text'])
+
 # Global set to track processed messages (simple deduplication)
 processed_messages = set()
 
@@ -338,7 +372,10 @@ def chatbot(state:summary_messages,config :RunnableConfig,store:BaseStore):
 
     # Inject LTM context into the unified system prompt from prompts.json
     system_msg = SystemMessage(
-        content=data["system_prompt"].format(user_details_content=user_details or "(empty)")+f"\n\n todays date is {datetime.now().date()}, and time is {datetime.now().time()}",        
+        content=data["system_prompt"].format(
+            user_details_content=user_details or "(empty)",
+            current_time=datetime.now().strftime('%Y-%m-%d %I:%M:%S %p'),
+        )
     )
 
     if state.get('summary'):
@@ -347,7 +384,7 @@ def chatbot(state:summary_messages,config :RunnableConfig,store:BaseStore):
         )
 
     message.extend(state['messages'])
-    response=llm.invoke(message +[system_msg]) 
+    response=llm.invoke([system_msg] + message) 
     return {'messages':[response]}
     
 def summarize_conversation(state:summary_messages):
