@@ -353,7 +353,7 @@ class summary_messages(state_chatbot): #inherits from state_chatbot
 
 @tool
 def web_search(query:str):
-    """Search the web for information."""
+    """Search the web for information. Ensure you use reputed and authoritative sources."""
     results= search_tool.invoke({"query": query})
     best_result = max(results['results'], key=lambda x: x['score'])
     return f"for title: {best_result['title']} \n\n from source: {best_result['url']} \n\n the content is: {best_result['content']}"
