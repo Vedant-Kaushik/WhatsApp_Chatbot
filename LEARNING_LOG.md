@@ -976,7 +976,7 @@ graph LR
 **Focus**: Gossip Protocol (Epidemic Protocol).
 
 ### 1. 🗣️ The Evolution to Gossip Protocol (Why do we need it?)
-Piyush Garg's narrative explains Gossip Protocol as a progression of Database Scaling:
+The Gossip Protocol can be understood as a progression of Database Scaling:
 *   **The Single DB Problem**: A single database handles all loads. When traffic increases, it becomes a **Single Point of Failure (SPOF)**.
 *   **Master-Slave (Leader-Follower)**: To solve SPOF and handle load, we add Replicas. 
     *   *How it works*: Master handles WRITES, Slaves handle READS. Master pushes data to slaves.
