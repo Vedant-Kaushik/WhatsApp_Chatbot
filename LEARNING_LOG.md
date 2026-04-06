@@ -968,3 +968,44 @@ graph LR
 *   **Why?**:
     *   Keeps the main queue healthy and fast.
     *   Allows engineers to inspect the DLQ later to find out *why* they failed (e.g., bad formatting) and manually replay them.
+
+---
+
+## 2026-04-06 (Day 14)
+
+**Focus**: Gossip Protocol (Epidemic Protocol).
+
+### 1. 🗣️ The Evolution to Gossip Protocol (Why do we need it?)
+Piyush Garg's narrative explains Gossip Protocol as a progression of Database Scaling:
+*   **The Single DB Problem**: A single database handles all loads. When traffic increases, it becomes a **Single Point of Failure (SPOF)**.
+*   **Master-Slave (Leader-Follower)**: To solve SPOF and handle load, we add Replicas. 
+    *   *How it works*: Master handles WRITES, Slaves handle READS. Master pushes data to slaves.
+    *   *The Flaw*: The Master is *still* a single point of failure for Writes. If the Master dies, the system is down for writes until a new Leader is elected.
+*   **Leaderless Architecture (Peer-to-Peer)**: What if *every* node can accept Writes? Now, there's no single point of failure.
+    *   *The Problem*: "Consistency". If User A updates Node 1, how do the other 100 nodes know about this update without a Master pushing it?
+
+**The Solution**: Decentralized Peer-to-Peer state management using the **Gossip Protocol** (aka Epidemic Protocol). 
+
+![Gossip Protocol Flow](./assets/gossip_protocol.png)
+
+### 2. ⚙️ How Gossip Protocol Works (Epidemic Spread)
+1.  **State Maintenance**: Each node in the cluster maintains a state (e.g., its health, the latest records written to it, timestamp).
+2.  **Random Broadcast (Rumors)**: Every $t$ seconds, a node randomly selects $k$ nodes (fanout constraint) and sends them its state/updates.
+3.  **Exponential Spread**: Just like a virus or a workplace rumor spreads, Node A tells Node B & C. Then B tells D & E. The data spreads exponentially.
+4.  **Merging**: When a node receives a gossip message, it compares the received data (using versions/timestamps). It updates its own state with the latest changes and continues gossiping.
+5.  **Failure Detection**: Nodes also gossip their "heartbeats". If Node X's heartbeat hasn't been updated inside the gossip messages for a long period, the cluster marks Node X as dead.
+
+### 3. ⚖️ Advantages vs Disadvantages
+
+**Advantages**:
+*   **True Decentralization**: No single point of failure. Every node is equal.
+*   **High Scalability**: Network traffic per node is constant $O(k)$ regardless of cluster size. It doesn't blow up exponentially.
+*   **Robustness**: Highly fault-tolerant against network partitions.
+
+**Disadvantages**:
+*   **Eventual Consistency**: Information takes time ($O(\log N)$ rounds) to reach the furthest nodes. It is not strongly consistent immediately.
+*   **Network Redundancy**: Redundant messages are eventually sent (multiple nodes telling Node A something Node A already knows).
+
+### 4. 🏢 Real-World Use Cases
+*   **Apache Cassandra**: Uses Gossip for cluster membership, node failure detection, and schema updates.
+*   **Amazon Dynamo**: Spreading server state and tracking node membership in leaderless setups.
