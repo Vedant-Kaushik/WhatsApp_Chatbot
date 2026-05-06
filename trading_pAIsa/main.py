@@ -6,6 +6,7 @@ import requests
 import gzip
 import json
 import io
+from contextlib import asynccontextmanager
 import upstox_client
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -18,12 +19,34 @@ from datetime import datetime
 
 # Load Environment Variables
 load_dotenv()
-app=FastAPI()
-templates = Jinja2Templates(directory="templates")
+
+# Database imports
+from database.db import init_db, get_db
+from database.market_repo import (
+    insert_instruments,
+    get_all_instruments,
+    insert_historical_candles,
+    get_historical_candles,
+    log_trade_signal
+)
+
+# Lifespan event handler for database initialization
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
+    preload_historical_data()
+    yield
+    # Shutdown logic (if needed)
+    pass
+
+app = FastAPI(lifespan=lifespan)
+
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), '..', 'templates'))
+
+
 # --- Configuration ---
 UPSTOX_API_KEY = os.getenv("UPSTOX_API_KEY")
-ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN") # Ensure you have this in .env or handle auth flow
-# Note: In a real app, you would handle the OAuth flow to get the access token dynamically.
+ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
 # Configure APIs
 configuration = upstox_client.Configuration()
@@ -89,7 +112,7 @@ def get_target_instrument_keys():
             nifty_keys.append(item['instrument_key'])
             
     # 3. Filter BSE Data (All Indices)
-    # Note: User wants ALL BSE Indices (Sensex, Bankex, etc.)
+    # Note: ALL BSE Indices (Sensex, Bankex, etc.)
     bse_index_keys = []
     for item in bse_data:
         if item['segment'] == 'BSE_INDEX':
@@ -295,29 +318,65 @@ def generate_professional_chart(stock_name, candles_chrono, metrics):
     return fig.to_html(full_html=False, include_plotlyjs='cdn')
 
 
-# Create a Global Cache Dictionary
-STOCK_CACHE = {
-    "target_keys": [],
-    "history_data": []
-}
-
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     return templates.TemplateResponse("frontend_upstox.html", {"request": request})
 
-@app.on_event("startup")
 def preload_historical_data():
     if not ACCESS_TOKEN:
         print("Error: UPSTOX_ACCESS_TOKEN not found! Cannot fetch data.")
         return
-        
-    print("Pre-fetching 1-year historical data...")
-    target_keys = get_target_instrument_keys()
     
-    # Save to global cache so all users can read it instantly
-    STOCK_CACHE["target_keys"] = target_keys
-    STOCK_CACHE["history_data"] = fetch_historical_data(target_keys)
-    print("Historical Cache populated successfully!")
+    # Initialize database on startup
+    init_db()
+    print("Database initialized!")
+    print("Pre-fetching instrument master and historical data...")
+    
+    # 1. Get or download instrument master
+    instruments = get_all_instruments()
+    
+    if not instruments or len(instruments) < 10:
+        print("Master cache empty or outdated. Download fresh NSE/BSE instrument data...")
+        target_keys = get_target_instrument_keys()
+        
+        # We need to map target_keys back to their full objects to store in DB
+        nse_data = get_instrument_master("NSE")
+        bse_data = get_instrument_master("BSE")
+        
+        instrument_objects = []
+        for item in nse_data + bse_data:
+            if item['instrument_key'] in target_keys:
+                instrument_objects.append({
+                    'instrument_key': item['instrument_key'],
+                    'trading_symbol': item['trading_symbol'],
+                    'segment': item['segment'],
+                    'exchange': 'NSE' if item in nse_data else 'BSE',
+                    'name': item.get('name')
+                })
+        
+        insert_instruments(instrument_objects)
+        print(f"Inserted/updated {len(instrument_objects)} instruments")
+    else:
+        print(f"Using cached {len(instruments)} instruments from database")
+    
+    instruments = get_all_instruments()
+    target_keys = [inst['instrument_key'] for inst in instruments]
+    
+    # 2. Fetch historical data only if not cached
+    for key in target_keys:
+        candles = get_historical_candles(key, "2025-01-01")
+        if not candles:
+            print(f"Fetching missing historical data for {key}...")
+            single_history = fetch_historical_data([key]) 
+            if single_history:
+                result = single_history[0]
+                candles_list = result['candles']
+                inserted = insert_historical_candles(key, candles_list)
+                print(f"Inserted {inserted} candles")
+            else:
+                print(f"Failed to fetch data for {key}")
+    
+    print("Historical data cache populated successfully!")
 
 @app.get("/analyze")
 async def analyze_redirect():
@@ -325,21 +384,30 @@ async def analyze_redirect():
 
 @app.post("/analyze",response_class=HTMLResponse)
 def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...)):
-    # Retrieve the heavy, static data from our RAM cache instantly (0 latency)
-    target_keys = STOCK_CACHE["target_keys"]
-    history_data = STOCK_CACHE["history_data"]
+    instruments = get_all_instruments()
+    target_keys = [inst['instrument_key'] for inst in instruments]
     
     if not target_keys:
         return RedirectResponse(url="/upstox/", status_code=302)
 
-    # Fetch ONLY the super-fast live price right now, because it changes every second
+    # Fetch ONLY the super-fast live price right now
     ltp_with_names = get_ltp(target_keys)
     
     stock_metrics = []
     
-    for candle_data in history_data:
-        instrument_key = candle_data['instrument_key']
-        candles = candle_data['candles']
+    for key in target_keys:
+        instrument_key = key
+        # Get candles from DB. They are dicts, need to convert to list format expected by technical analysis
+        db_candles = get_historical_candles(key)
+        
+        if not db_candles:
+            continue
+            
+        # Reconstruct list format: [timestamp, open, high, low, close, volume]
+        candles = [
+            [c['timestamp'], c['open'], c['high'], c['low'], c['close'], c['volume']] 
+            for c in db_candles
+        ]
         ltp = ltp_with_names.get(instrument_key) # Current Price
         
         candles_chrono = list(reversed(candles))
@@ -390,6 +458,16 @@ CRITICAL INSTRUCTION: You MUST explicitly include a transitional sentence at the
     candlestick_html = generate_professional_chart(stock_name, best_stock['candles'], best_stock)
     
     result = llm.invoke(prompt).content
+    
+    # Log the AI signal to the database
+    log_trade_signal({
+        'instrument_key': best_stock['key'],
+        'signal_type': 'BUY', # Defaulting to BUY since we're recommending it
+        'recommended_amount': amount,
+        'ltp_at_signal': best_stock['ltp'],
+        'stock_name': stock_name,
+        'reasoning': result
+    })
     
     return templates.TemplateResponse("frontend_upstox.html", {
         "request": request, 

@@ -61,3 +61,4 @@ assets/
 !assets/langgraph_architecture.png
 tavily.ipynb
 *.ipynb
+trading_pAIsa/.env.trading
