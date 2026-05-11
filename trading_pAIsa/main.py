@@ -191,7 +191,10 @@ def get_ltp(target_keys):
 # --- Technical Analysis ---
 
 def calculate_returns_and_sma(ltp, closes):
-    start_price = closes[0]
+    # Use the price from 12 months ago if available, otherwise oldest
+    lookback = min(12, len(closes))
+    start_price = closes[-lookback]
+    
     ret_1y = ((ltp - start_price) / start_price) * 100
     avg_3m = sum(closes[-3:]) / min(3, len(closes))
     trend = "BULLISH" if ltp > avg_3m else "BEARISH"
@@ -379,8 +382,10 @@ def preload_historical_data():
     print("Historical data cache populated successfully!")
 
 @app.get("/analyze")
-async def analyze_redirect():
-    return RedirectResponse(url="/")
+async def analyze_redirect(request: Request):
+    # When a user hits reload on the analyze tab, redirect them back to home page
+    # This prevents re-analysis on page refresh, which can cause duplicate signals in DB
+    return RedirectResponse(url="/", status_code=302)
 
 @app.post("/analyze",response_class=HTMLResponse)
 def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...)):
@@ -395,23 +400,28 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
     
     stock_metrics = []
     
+    # Create a mapping for quick lookup of names/symbols
+    instrument_map = {inst['instrument_key']: inst for inst in instruments}
+    
     for key in target_keys:
         instrument_key = key
+        inst_info = instrument_map.get(key, {})
+        
         # Get candles from DB. They are dicts, need to convert to list format expected by technical analysis
         db_candles = get_historical_candles(key)
         
         if not db_candles:
             continue
             
-        # Reconstruct list format: [timestamp, open, high, low, close, volume]
-        candles = [
+        # The database already returns data in ASC order (Oldest -> Newest)
+        # We keep it that way for technical analysis
+        candles_chrono = [
             [c['timestamp'], c['open'], c['high'], c['low'], c['close'], c['volume']] 
             for c in db_candles
         ]
+        
         ltp = ltp_with_names.get(instrument_key) # Current Price
         
-        candles_chrono = list(reversed(candles))
-
         #  technical analysis
         metrics = calculate_technical_indicators(ltp, candles_chrono)
         
@@ -419,6 +429,8 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
         
         stock_metrics.append({
             "key": instrument_key,
+            "symbol": inst_info.get('trading_symbol', key),
+            "name": inst_info.get('name', key),
             "ltp": ltp,
             "candles": candles_chrono,
             **metrics
@@ -440,19 +452,30 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
         best_stock = max(top_20, key=lambda x: x['ret_1y'])
         reason = "highest 1-year return, making it ideal for maximizing long-term growth"
 
-    stock_name = best_stock['key'].split('|')[-1]
+    stock_name = best_stock['symbol']
+    full_name = best_stock['name']
 
-    prompt = f"""You are a professional, objective financial analyst advising a client.
-The client wants to invest ₹{amount} for {time} months. 
-Based on this criteria, my system has selected {stock_name} because it has the {reason}.
+    prompt = f"""Hey! You're a simple and friendly stock helper.
 
-Here are the technical numbers for {stock_name}:
-Price: {best_stock['ltp']} | 1Y Return: {best_stock['ret_1y']:.2f}% | Trend: {best_stock['trend']} | Volatility (ATR): {best_stock['atr']:.2f}
+    A person wants to put ₹{amount} in a stock for {time} months.
+    Based on their goal, I have selected {full_name} ({stock_name}) because it has the {reason}.
 
-Write a 3-4 sentence professional summary explaining why this stock ({stock_name}) is a good fit for their specific investment amount (₹{amount}) and time horizon ({time} months). 
-Keep your tone authoritative but accessible. Do not use complicated jargon or emojis.
-CRITICAL INSTRUCTION: You MUST explicitly include a transitional sentence at the end like "Please refer to the chart I generated below for a visual breakdown." and "Tell user ok your amount and time are <amount> and <time> "
-"""
+    Technical Stats for this stock:
+    - Current Price: ₹{best_stock['ltp']}
+    - Last Year's Growth: +{best_stock['ret_1y']:.1f}%
+    - Current Market Trend: {best_stock['trend']}
+    - Safety/Stability (ATR): {best_stock['atr']:.1f}
+
+    Write a simple 3-4 sentence message to the user explaining why this stock is a good fit for their specific time horizon ({time} months) and amount (₹{amount}). 
+    Use the reason I gave you ({reason}) as your main point.
+    Keep it very simple and friendly, like you're talking to a friend. Do not use emojis in the main text, only use the specific one I ask for below.
+
+    You MUST start your response with exactly this line:
+    "Starting with your ₹{amount} at {time} months wait ⏳"
+
+    And you MUST end your response with exactly this line:
+    "Here's the chart to see how price moved!"
+    """
     
     # -- Generate Plotly HTML Snippet for the selected stock --
     candlestick_html = generate_professional_chart(stock_name, best_stock['candles'], best_stock)

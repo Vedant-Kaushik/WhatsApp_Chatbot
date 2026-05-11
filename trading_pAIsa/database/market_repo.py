@@ -306,7 +306,7 @@ def log_trade_signal(signal: Dict) -> int:
 
     try:
         conn = get_db()
-        conn.execute(
+        cursor = conn.execute(
             """
             INSERT INTO trade_signals
             (instrument_key, signal_type, recommended_amount, ltp_at_signal, stock_name, reasoning)
@@ -322,7 +322,7 @@ def log_trade_signal(signal: Dict) -> int:
             )
         )
         conn.commit()
-        row_id = conn.lastrowid
+        row_id = cursor.lastrowid
         conn.close()
         return row_id or 1
     except sqlite3.Error as e:
