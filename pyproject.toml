@@ -22,6 +22,7 @@ dependencies = [
     "langgraph-checkpoint-sqlite>=3.0.1",
     "matplotlib>=3.10.8",
     "pandas>=3.0.0",
+    "passlib>=1.7.4",
     "pip>=26.0",
     "plotly>=6.6.0",
     "protobuf>=6.33.4",

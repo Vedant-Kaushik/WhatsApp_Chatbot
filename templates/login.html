@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - pAIsa</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background-color: #f0f0f0;
+            padding: 50px;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border: 1px solid #ccc;
+            max-width: 400px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #999;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            background-color: #ffeaea;
+            padding: 10px;
+            border: 1px solid red;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .signup-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+        <h1 style="margin-bottom: 0px; color: #333;">
+            <span style="font-style: italic; font-weight: normal; font-size: 0.9em;">p</span><span style="font-weight: bold; font-size: 1.3em;">AI</span><span style="font-style: italic; font-weight: normal; font-size: 0.9em;">sa</span>
+        </h1>
+        <div style="font-style: italic; font-weight: normal; font-size: 1.1em; color: #555;">
+            AI Investment Assistant
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Login</h2>
+
+        {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" name="username" required>
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" name="password" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+
+        <div class="signup-link">
+            New user? <a href="/signup">Create account here</a>
+        </div>
+    </div>
+</body>
+</html>

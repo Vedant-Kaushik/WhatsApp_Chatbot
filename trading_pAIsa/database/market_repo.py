@@ -4,6 +4,7 @@ Provides CRUD operations and querying for:
 - instruments
 - historical_candles
 - trade_signals (for AI backtracking)
+- users (for basic authentication)
 
 Features:
 - Parameterized queries only (SQL injection prevention)
@@ -14,8 +15,9 @@ Features:
 """
 import sqlite3
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from .db import get_db
+import hashlib
 
 
 def insert_instruments(instruments: List[Dict]) -> int:
@@ -353,3 +355,146 @@ def get_trade_signals_after_date(start_date: str) -> List[Dict]:
     results = [dict(zip(columns, row)) for row in cursor.fetchall()]
     conn.close()
     return results
+
+
+def init_user_db():
+    """Initialize the users table if it doesn't exist.
+
+    Creates the users table with:
+    - id: INTEGER PRIMARY KEY
+    - username: TEXT UNIQUE
+    - password_hash: TEXT
+    - default_amount: INTEGER
+    - default_time: INTEGER
+    - created_at: TIMESTAMP
+    """
+    conn = get_db()
+
+    # Check if users table exists
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    table_exists = cursor.fetchone()
+
+    if table_exists:
+        # Check if password_hash column exists
+        cursor = conn.execute("PRAGMA table_info(users)")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+
+        if 'password_hash' not in column_names:
+            # Add password_hash column
+            conn.execute(
+                "ALTER TABLE users ADD COLUMN password_hash TEXT"
+            )
+    else:
+        # Create new table
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                default_amount INTEGER DEFAULT 5000,
+                default_time INTEGER DEFAULT 6,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def create_user(username: str, password: str, default_amount: int, default_time: int) -> bool:
+    """Create a new user account.
+
+    Args:
+        username: Unique username for the user
+        password: Plain text password (will be hashed)
+        default_amount: User's default investment amount (e.g., 5000)
+        default_time: User's default time horizon in months (e.g., 6)
+
+    Returns:
+        bool: True if user was created, False if username already exists
+    """
+    conn = get_db()
+    # Check if username already exists
+    cursor = conn.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,)
+    )
+    if cursor.fetchone():
+        conn.close()
+        return False
+
+    # Hash the password
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+
+    conn.execute(
+        """
+        INSERT INTO users (username, password_hash, default_amount, default_time)
+        VALUES (?, ?, ?, ?)
+        """,
+        (username, password_hash, default_amount, default_time)
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_user_by_username(username: str) -> Optional[Dict]:
+    """Get user by username.
+
+    Args:
+        username: Username to lookup
+
+    Returns:
+        Optional[Dict]: User data dict if found, None otherwise
+    """
+    conn = get_db()
+    cursor = conn.execute(
+        "SELECT * FROM users WHERE username = ?",
+        (username,)
+    )
+    result = cursor.fetchone()
+
+    if result:
+        columns = [col[0] for col in cursor.description]
+        user_dict = dict(zip(columns, result))
+    else:
+        user_dict = None
+
+    conn.close()
+    return user_dict
+
+
+def update_user_defaults(username: str, default_amount: int, default_time: int) -> bool:
+    """Update user's default investment amount and time.
+
+    Args:
+        username: Username to update
+        default_amount: New default amount
+        default_time: New default time horizon
+
+    Returns:
+        bool: True if updated, False if user not found
+    """
+    conn = get_db()
+    cursor = conn.execute(
+        "SELECT id FROM users WHERE username = ?",
+        (username,)
+    )
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    conn.execute(
+        """
+        UPDATE users
+        SET default_amount = ?, default_time = ?
+        WHERE username = ?
+        """,
+        (default_amount, default_time, username)
+    )
+    conn.commit()
+    conn.close()
+    return True

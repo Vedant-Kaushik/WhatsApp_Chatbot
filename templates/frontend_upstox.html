@@ -1,184 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upstox Stock Analysis</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        input {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button {
-            padding: 12px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 4px;
-        }
-        .result h2 {
-            margin-top: 0;
-            color: #28a745;
-        }
-        .result p {
-            margin: 5px 0;
-            line-height: 1.6;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pAIsa - AI Investment Assistant</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    padding: 20px;
+}
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+h1 {
+    text-align: center;
+    color: #333;
+}
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+label {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+button {
+    padding: 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+button:hover {
+    background-color: #0056b3;
+}
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+}
+.result h2 {
+    margin-top: 0;
+    color: #28a745;
+}
+.result p {
+    margin: 5px 0;
+    line-height: 1.6;
+}
 
-        /* Loading Overlay Styles */
-        #loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            z-index: 1000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .spinner {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #007bff;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #loading-text {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-            font-weight: bold;
-            text-align: center;
-            padding: 0 15px; /* Add padding for mobile */
-        }
-        
-        /* Mobile Responsiveness */
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            .container {
-                padding: 15px;
-            }
-            h1 {
-                font-size: 24px;
-            }
-            input, button {
-                font-size: 14px;
-                padding: 10px;
-            }
-            .result {
-                padding: 15px;
-            }
-            .result h2 {
-                font-size: 20px;
-            }
-            .result p {
-                font-size: 14px !important; /* Force smaller text on mobile */
-            }
-        }
-    </style>
+/* Loading Overlay Styles */
+#loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #007bff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+#loading-text {
+    margin-top: 20px;
+    font-size: 18px;
+    color: #333;
+    font-weight: bold;
+    text-align: center;
+    padding: 0 15px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+    .container {
+        padding: 15px;
+    }
+    h1 {
+        font-size: 24px;
+    }
+    input, button {
+        font-size: 14px;
+        padding: 10px;
+    }
+    .result {
+        padding: 15px;
+    }
+    .result h2 {
+        font-size: 20px;
+    }
+    .result p {
+        font-size: 14px !important;
+    }
+}
+
+/* Auth buttons styling */
+.auth-buttons {
+    text-align: right;
+    margin-bottom: 15px;
+}
+.auth-buttons a {
+    display: inline-block;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-left: 5px;
+}
+</style>
 </head>
 <body>
-    <h1>Upstox Stock Analysis</h1>
+<!-- Auth Buttons (Top Right) -->
+<div class="auth-buttons">
+    {% if user %}
+    <span style="font-weight: bold; color: #555; margin-right: 15px;">
+        Welcome, {{ user.username }}!
+    </span>
+    <a href="/logout" style="background-color: #dc3545; color: white;">
+        Logout
+    </a>
+    {% else %}
+    <a href="/login" style="background-color: #28a745; color: white;">
+        Login
+    </a>
+    <a href="/signup" style="background-color: #007bff; color: white;">
+        Sign Up
+    </a>
+    {% endif %}
+</div>
+
+<!-- Logo Header (Centered above box) -->
+<div style="text-align: center; margin-top: 40px; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+    <h1 style="margin-bottom: 0px; color: #333;">
+        <span style="font-style: italic; font-weight: normal; font-size: 0.9em;">p</span><span style="font-weight: bold; font-size: 1.3em;">AI</span><span style="font-style: italic; font-weight: normal; font-size: 0.9em;">sa</span>
+    </h1>
+    <div style="font-style: italic; font-weight: normal; font-size: 1.1em; color: #555;">
+        AI Investment Assistant
+    </div>
+</div>
+
+<div class="container">
+
     <form action="analyze" method="post" onsubmit="showLoading()">
         <label>Amount (₹):</label>
-        <input type="number" name="amount" value="{{ amount if amount else '' }}" required>
+        <input type="number" name="amount" placeholder="Enter Amount (₹)" value="{{ user.default_amount if user else '' }}" required>
         <br>
         <label>Time (months):</label>
-        <input type="number" name="time" value="{{ time if time else '' }}" required>
+        <input type="number" name="time" placeholder="Enter Time (months)" value="{{ user.default_time if user else '' }}" required>
         <br>
         <button type="submit">Analyze</button>
     </form>
-    
-    <!-- Full Screen Loading Overlay -->
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div id="loading-text">
-            Fetching live prices for 100+ stocks...<br>
-            Running AI Technical Analysis.<br><br>
-            <span style="color: #007bff; font-size: 14px;">This may take up to 1-2 minutes. Please do not close or refresh the page!</span>
-        </div>
+
+<!-- Full Screen Loading Overlay -->
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">
+        Fetching live prices for 100+ stocks...<br>
+        Running AI Technical Analysis.<br><br>
+        <span style="color: #007bff; font-size: 14px;">This may take up to 1-2 minutes. Please do not close or refresh the page!</span>
+    </div>
+</div>
+
+<script>
+function showLoading() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    // Disable the Submit button to prevent double-clicks
+    document.querySelector('button[type="submit"]').disabled = true;
+    document.querySelector('button[type="submit"]').innerText = 'Analyzing...';
+}
+</script>
+
+{% if result %}
+<div class="result" style="margin-top: 20px; padding: 20px; background-color: #e8f4f8; border-left: 5px solid #007bff; border-radius: 8px;">
+    <h2 style="color: #007bff; margin-top: 0;">AI Technical Verdict</h2>
+    <p style="font-size: 16px; white-space: pre-wrap;">{{ result }}</p>
+</div>
+{% endif %}
+
+{% if candlestick_chart %}
+<div class="result" style="margin-top: 30px; padding: 20px; border: 1px solid #ccc; background-color: #fff; border-radius: 8px;">
+    <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Technical Indicator Visuals</h2>
+
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+        <strong style="font-size: 16px;">Chart Legend:</strong>
+        <ul style="margin-top: 5px; list-style-type: none; padding-left: 0;">
+            <li style="margin-bottom: 5px;"><strong>Prices (Candlesticks):</strong> The main visual showing Open, High, Low, Close prices.</li>
+            <li style="margin-bottom: 5px;"><strong style="color: #ff8c00;">Orange Solid Line (3-Month SMA):</strong> The 3-Month Simple Moving Average trend line.</li>
+            <li style="margin-bottom: 5px;"><strong style="color: #28a745;">Green Dashed Line (Support):</strong> The lowest price of the last 6 months (Floor).</li>
+            <li style="margin-bottom: 5px;"><strong style="color: #dc3545;">Red Dashed Line (Resistance):</strong> The highest price of the last 6 months (Ceiling).</li>
+            <li style="margin-bottom: 5px;"><strong style="color: #20c997;">Bottom Sub-Chart (Volume Trend):</strong> The number of shares traded per month.</li>
+        </ul>
     </div>
 
-    <script>
-        function showLoading() {
-            document.getElementById('loading-overlay').style.display = 'flex';
-            // Disable the Submit button to prevent double-clicks
-            document.querySelector('button[type="submit"]').disabled = true;
-            document.querySelector('button[type="submit"]').innerText = 'Analyzing...';
-        }
-    </script>
-    
-    {% if result %}
-    <div class="result" style="margin-top: 20px; padding: 20px; background-color: #e8f4f8; border-left: 5px solid #007bff; border-radius: 8px;">
-        <h2 style="color: #007bff; margin-top: 0;">AI Technical Verdict</h2>
-        <p style="font-size: 16px; white-space: pre-wrap;">{{ result }}</p>
-    </div>
-    {% endif %}
-
-    {% if candlestick_chart %}
-    <div class="result" style="margin-top: 30px; padding: 20px; border: 1px solid #ccc; background-color: #fff; border-radius: 8px;">
-        <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Technical Indicator Visuals</h2>
-        
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-            <strong style="font-size: 16px;">Chart Legend:</strong>
-            <ul style="margin-top: 5px; list-style-type: none; padding-left: 0;">
-                <li style="margin-bottom: 5px;"><strong>Prices (Candlesticks):</strong> The main visual showing Open, High, Low, Close prices.</li>
-                <li style="margin-bottom: 5px;"><strong style="color: #ff8c00;">Orange Solid Line (3-Month SMA):</strong> The 3-Month Simple Moving Average trend line.</li>
-                <li style="margin-bottom: 5px;"><strong style="color: #28a745;">Green Dashed Line (Support):</strong> The lowest price of the last 6 months (Floor).</li>
-                <li style="margin-bottom: 5px;"><strong style="color: #dc3545;">Red Dashed Line (Resistance):</strong> The highest price of the last 6 months (Ceiling).</li>
-                <li style="margin-bottom: 5px;"><strong style="color: #20c997;">Bottom Sub-Chart (Volume Trend):</strong> The number of shares traded per month.</li>
-            </ul>
-        </div>
-
-        {{ candlestick_chart | safe }}
-    </div>
+    {{ candlestick_chart | safe }}
+</div>
 
     <!-- Back to Home Button -->
     <div style="text-align: center; margin-top: 40px; margin-bottom: 60px;">
@@ -188,7 +232,8 @@
             </button>
         </a>
     </div>
-    {% endif %}
+{% endif %}
 
+</div>
 </body>
 </html>
