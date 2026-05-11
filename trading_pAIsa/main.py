@@ -9,13 +9,13 @@ import io
 from contextlib import asynccontextmanager
 import upstox_client
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Form
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi import FastAPI, Request, Form
 from datetime import datetime
+import hashlib
 
 # Load Environment Variables
 load_dotenv()
@@ -27,7 +27,11 @@ from database.market_repo import (
     get_all_instruments,
     insert_historical_candles,
     get_historical_candles,
-    log_trade_signal
+    log_trade_signal,
+    init_user_db,
+    create_user,
+    get_user_by_username,
+    update_user_defaults
 )
 
 # Lifespan event handler for database initialization
@@ -323,7 +327,97 @@ def generate_professional_chart(stock_name, candles_chrono, metrics):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("frontend_upstox.html", {"request": request})
+    # Initialize user database on first run
+    init_user_db()
+
+    # Check if user is logged in
+    use_cookie = request.cookies.get("user_id")
+    user = None
+    if use_cookie:
+        user_data = get_user_by_username(use_cookie.split(":")[0])
+        user = user_data
+
+    return templates.TemplateResponse(
+        "frontend_upstox.html",
+        {"request": request, "user": user}
+    )
+
+
+@app.get("/signup")
+async def get_signup(request: Request):
+    return templates.TemplateResponse("signup.html", {"request": request})
+
+
+@app.post("/signup")
+async def post_signup(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    default_amount: int = Form(5000),
+    default_time: int = Form(6)
+):
+    # Check if user already exists
+    existing_user = get_user_by_username(username)
+    if existing_user:
+        return templates.TemplateResponse(
+            "signup.html",
+            {"request": request, "error": "Username already exists. Please choose a different username."}
+        )
+
+    # Create new user
+    success = create_user(username, password, default_amount, default_time)
+    if success:
+        # Log the user in by setting cookie
+        response = RedirectResponse(url="/", status_code=302)
+        response.set_cookie(key="user_id", value=username)
+        return response
+    else:
+        return templates.TemplateResponse(
+            "signup.html",
+            {"request": request, "error": "Failed to create user. Please try again."}
+        )
+
+
+@app.get("/login")
+async def get_login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+async def post_login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...)
+):
+    user = get_user_by_username(username)
+    if not user:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "User not found."}
+        )
+
+    # Verify password by comparing hashes
+    input_hash = hashlib.sha256(password.encode()).hexdigest()
+    stored_hash = user.get("password_hash")
+
+    if input_hash == stored_hash:
+        # Login successful - set cookie
+        response = RedirectResponse(url="/", status_code=302)
+        response.set_cookie(key="user_id", value=username)
+        return response
+    else:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "Incorrect password. Please try again."}
+        )
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    # Clear the cookie and redirect
+    response = RedirectResponse(url="/", status_code=302)
+    response.delete_cookie("user_id")
+    return response
 
 def preload_historical_data():
     if not ACCESS_TOKEN:
@@ -492,11 +586,18 @@ def analyze_data(request: Request, amount: int = Form(...), time: int = Form(...
         'reasoning': result
     })
     
+    # Check if user is logged in to provide context to the template
+    user_id = request.cookies.get("user_id")
+    user = None
+    if user_id:
+        user = get_user_by_username(user_id)
+
     return templates.TemplateResponse("frontend_upstox.html", {
         "request": request, 
         "result": result,
         "candlestick_chart": candlestick_html,
         "amount": amount,
-        "time": time
+        "time": time,
+        "user": user
     })
 

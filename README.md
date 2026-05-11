@@ -185,20 +185,21 @@ ngrok http 5173
 
 ---
 
-## 📈 AI Investment Analyst (Upstox)
+## 📈 AI Investment Analyst (pAIsa)
 
-A separate module that provides AI-powered stock analysis directly via a web interface.
+A dedicated stock analysis dashboard that provides AI-powered insights for the Indian Market.
+
+**[👉 Read the full pAIsa Documentation here](./trading_pAIsa/README.md)**
 
 **How it works:**
-1.  **Smart Filter**: Scans the **Nifty 50** (Top 50 Indian companies by market cap).
-2.  **Affordability Check**: You enter your investment budget and the bot filters out stocks above your budget.
-3.  **Liquidity Sort**: Picks the most liquid/active stocks to ensure safety.
-4.  **Deep-Dive Analysis**: Fetches **6 months of daily candles** (historical data) for shortlisted stocks.
-5.  **LLM Verdict**: Gemini 2.5 Flash analyzes the chart patterns and gives a clear **Buy/Hold/Avoid** rating with reasons.
+1.  **Personalized Account**: Register to save your default investment budget and time horizon.
+2.  **Smart Analysis**: Scans the **Nifty 50** and filters based on your budget and liquidity.
+3.  **Deep-Dive Analysis**: Fetches historical candle data and calculates technical indicators.
+4.  **AI Verdict**: Gemini 2.5 Flash analyzes the chart patterns and gives a clear **Buy/Hold/Avoid** verdict.
 
-**Run the Upstox module:**
+**Run the pAIsa Dashboard:**
 ```bash
-uv run uvicorn upstox_analysis:app --host 0.0.0.0 --port 8000
+uv run uvicorn trading_pAIsa.main:app --host 0.0.0.0 --port 8000
 ```
 
 **Additional `.env` variables for Upstox:**
