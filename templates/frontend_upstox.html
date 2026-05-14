@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>pAIsa - AI Investment Assistant</title>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
 body {
     font-family: Arial, sans-serif;
@@ -138,9 +139,9 @@ button:hover {
 }
 </style>
 </head>
-<body>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center px-4 py-8">
 <!-- Auth Buttons (Top Right) -->
-<div class="auth-buttons">
+<div class="auth-buttons flex justify-end items-center gap-3 mb-4">
     {% if user %}
     <span style="font-weight: bold; color: #555; margin-right: 15px;">
         Welcome, {{ user.username }}!
@@ -168,16 +169,14 @@ button:hover {
     </div>
 </div>
 
-<div class="container">
+<div class="container bg-white rounded-xl shadow-xl p-8 max-w-xl w-full">
 
-    <form action="analyze" method="post" onsubmit="showLoading()">
-        <label>Amount (₹):</label>
-        <input type="number" name="amount" placeholder="Enter Amount (₹)" value="{{ user.default_amount if user else '' }}" required>
-        <br>
-        <label>Time (months):</label>
-        <input type="number" name="time" placeholder="Enter Time (months)" value="{{ user.default_time if user else '' }}" required>
-        <br>
-        <button type="submit">Analyze</button>
+    <form action="analyze" method="post" onsubmit="showLoading()" class="flex flex-col gap-4">
+        <label class="font-semibold text-gray-700">Amount (₹):</label>
+        <input type="number" name="amount" placeholder="Enter Amount (₹)" value="{{ user.default_amount if user else '' }}" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors">
+        <label class="font-semibold text-gray-700">Time (months):</label>
+        <input type="number" name="time" placeholder="Enter Time (months)" value="{{ user.default_time if user else '' }}" required class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors">
+        <button type="submit" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl">Analyze Stock</button>
     </form>
 
 <!-- Full Screen Loading Overlay -->
@@ -200,24 +199,24 @@ function showLoading() {
 </script>
 
 {% if result %}
-<div class="result" style="margin-top: 20px; padding: 20px; background-color: #e8f4f8; border-left: 5px solid #007bff; border-radius: 8px;">
-    <h2 style="color: #007bff; margin-top: 0;">AI Technical Verdict</h2>
-    <p style="font-size: 16px; white-space: pre-wrap;">{{ result }}</p>
+<div class="mt-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-xl shadow-md">
+    <h2 class="text-xl font-bold text-blue-700 mb-3">AI Technical Verdict</h2>
+    <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{{ result }}</p>
 </div>
 {% endif %}
 
 {% if candlestick_chart %}
-<div class="result" style="margin-top: 30px; padding: 20px; border: 1px solid #ccc; background-color: #fff; border-radius: 8px;">
-    <h2 style="color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px;">Technical Indicator Visuals</h2>
+<div class="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+    <h2 class="text-xl font-bold text-indigo-700 border-b-2 border-indigo-600 pb-3 mb-4">Technical Indicator Visuals</h2>
 
-    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-        <strong style="font-size: 16px;">Chart Legend:</strong>
-        <ul style="margin-top: 5px; list-style-type: none; padding-left: 0;">
-            <li style="margin-bottom: 5px;"><strong>Prices (Candlesticks):</strong> The main visual showing Open, High, Low, Close prices.</li>
-            <li style="margin-bottom: 5px;"><strong style="color: #ff8c00;">Orange Solid Line (3-Month SMA):</strong> The 3-Month Simple Moving Average trend line.</li>
-            <li style="margin-bottom: 5px;"><strong style="color: #28a745;">Green Dashed Line (Support):</strong> The lowest price of the last 6 months (Floor).</li>
-            <li style="margin-bottom: 5px;"><strong style="color: #dc3545;">Red Dashed Line (Resistance):</strong> The highest price of the last 6 months (Ceiling).</li>
-            <li style="margin-bottom: 5px;"><strong style="color: #20c997;">Bottom Sub-Chart (Volume Trend):</strong> The number of shares traded per month.</li>
+    <div class="bg-gray-50 p-4 rounded-lg mb-4">
+        <strong class="text-base">Chart Legend:</strong>
+        <ul class="mt-2 space-y-2">
+            <li><strong class="text-gray-700">Prices (Candlesticks):</strong> The main visual showing Open, High, Low, Close prices.</li>
+            <li><strong class="text-orange-500">Orange Line (3-Month SMA):</strong> The 3-Month Simple Moving Average trend line.</li>
+            <li><strong class="text-green-500">Green Dashed (Support):</strong> The lowest price of the last 6 months.</li>
+            <li><strong class="text-red-500">Red Dashed (Resistance):</strong> The highest price of the last 6 months.</li>
+            <li><strong class="text-teal-500">Bottom Chart (Volume):</strong> Number of shares traded per month.</li>
         </ul>
     </div>
 
@@ -225,9 +224,9 @@ function showLoading() {
 </div>
 
     <!-- Back to Home Button -->
-    <div style="text-align: center; margin-top: 40px; margin-bottom: 60px;">
-        <a href="/" style="text-decoration: none;">
-            <button type="button" style="background-color: #28a745; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 18px; cursor: pointer; transition: background 0.3s;">
+    <div class="text-center mt-10 mb-16">
+        <a href="/" class="inline-block no-underline">
+            <button type="button" class="px-8 py-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 active:bg-green-800 transition-all duration-200 shadow-lg hover:shadow-xl text-lg">
                 Start New Analysis
             </button>
         </a>
