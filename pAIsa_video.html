@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pAIsa - AI Investment Assistant (Video Demo)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"></script>
+<style>
+/* Base Styles */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    overflow: hidden; /* Prevent scrolling for a clean video capture */
+}
+
+/* Presentation / Camera */
+#video-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background-color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#camera {
+    width: 100vw;
+    height: 100vh;
+    transform-origin: center top;
+    will-change: transform;
+    background-color: #f3f4f6; /* bg-gray-100 */
+    position: relative; /* CRITICAL: ensures cursor is positioned inside camera space */
+}
+
+/* The actual UI matching frontend_upstox.html */
+#real-ui {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    box-sizing: border-box;
+}
+
+.auth-buttons {
+    text-align: right;
+    margin-bottom: 15px;
+}
+.auth-buttons a {
+    display: inline-block;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-left: 5px;
+}
+
+.spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #007bff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Realistic iPad Cursor */
+#video-cursor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    pointer-events: none;
+    /* Center the circle on the exact X/Y coordinate */
+    margin-top: -10px;
+    margin-left: -10px;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* iPad Hover State */
+#video-cursor.pointer {
+    background-color: rgba(0, 0, 0, 0.2);
+    transform: scale(1.5);
+}
+
+/* Click Ripple Animation */
+.ripple {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(37, 99, 235, 0.4);
+    transform: scale(0);
+    animation: ripple-anim 0.5s ease-out;
+    pointer-events: none;
+    z-index: 9998;
+}
+@keyframes ripple-anim {
+    to {
+        transform: scale(3.5);
+        opacity: 0;
+    }
+}
+
+/* Blinking text cursor */
+.input-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background-color: black;
+    vertical-align: middle;
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="video-container">
+    <!-- Camera container moves everything together -->
+    <div id="camera">
+        <!-- EXACT DOM Structure from frontend_upstox.html -->
+        <div id="real-ui" class="bg-gray-100">
+            <!-- Auth Buttons (Top Right) -->
+            <div class="auth-buttons flex justify-end items-center gap-3 mb-4 w-full max-w-xl">
+                <a href="#" style="background-color: #28a745; color: white;">Login</a>
+                <a href="#" style="background-color: #007bff; color: white;">Sign Up</a>
+            </div>
+
+            <!-- Logo Header (Centered above box) -->
+            <div style="text-align: center; margin-top: 40px; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
+                <h1 style="margin-bottom: 0px; color: #333; font-size: 2.2em;">
+                    <span style="font-style: italic; font-weight: normal; font-size: 0.9em;">p</span><span style="font-weight: bold; font-size: 1.3em;">AI</span><span style="font-style: italic; font-weight: normal; font-size: 0.9em;">sa</span>
+                </h1>
+                <div style="font-style: italic; font-weight: normal; font-size: 1.1em; color: #555;">
+                    AI Investment Assistant
+                </div>
+            </div>
+
+            <!-- Main Container -->
+            <div class="bg-white rounded-xl shadow-xl p-8 max-w-xl w-full" style="position: relative;">
+                
+                <!-- Form Section -->
+                <div id="form-section" class="flex flex-col gap-4">
+                    <label class="font-semibold text-gray-700">Amount (₹):</label>
+                    <div id="input-amount-wrapper" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white relative flex items-center transition-colors">
+                        <span id="amount-text" class="text-gray-900 text-lg"></span><span id="amount-cursor" class="input-cursor" style="display:none;"></span>
+                        <span id="amount-placeholder" class="text-gray-400 absolute left-4 pointer-events-none">Enter Amount (₹)</span>
+                    </div>
+
+                    <label class="font-semibold text-gray-700">Time (months):</label>
+                    <div id="input-time-wrapper" class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-white relative flex items-center transition-colors">
+                        <span id="time-text" class="text-gray-900 text-lg"></span><span id="time-cursor" class="input-cursor" style="display:none;"></span>
+                        <span id="time-placeholder" class="text-gray-400 absolute left-4 pointer-events-none">Enter Time (months)</span>
+                    </div>
+
+                    <div id="analyze-btn-wrapper" class="w-full relative mt-2">
+                        <button id="analyze-btn" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-lg transition-all cursor-pointer">Analyze Stock</button>
+                    </div>
+                </div>
+
+                <!-- Loading Overlay -->
+                <div id="loading-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.95); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; border-radius: 0.75rem; opacity: 0;">
+                    <div class="spinner"></div>
+                    <div id="loading-text" style="margin-top: 20px; font-size: 18px; color: #333; font-weight: bold; text-align: center; padding: 0 15px;">
+                        Fetching live prices for 100+ stocks...<br>
+                        Running AI Technical Analysis.<br><br>
+                        <span style="color: #007bff; font-size: 14px;">This may take up to 1-2 minutes. Please do not close or refresh the page!</span>
+                    </div>
+                </div>
+
+                <!-- Result Section -->
+                <div id="result-section" style="display: none; opacity: 0;">
+                    <div class="mt-2 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-xl shadow-md">
+                        <h2 class="text-xl font-bold text-blue-700 mb-3">AI Technical Verdict</h2>
+                        <p class="text-gray-700 leading-relaxed whitespace-pre-wrap" id="result-text" style="min-height: 120px;"></p>
+                    </div>
+
+                    <div class="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-lg">
+                        <h2 class="text-xl font-bold text-indigo-700 border-b-2 border-indigo-600 pb-3 mb-4">Technical Indicator Visuals</h2>
+                        
+                        <!-- Dark Mode Authentic Chart -->
+                        <div class="w-full bg-gray-900 border border-gray-800 rounded-lg overflow-hidden flex flex-col relative mt-4 shadow-inner">
+                            <!-- Plotly modebar fake -->
+                            <div class="absolute top-2 right-2 flex space-x-2 text-gray-500">
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 2h12v12H2z" fill="none" stroke="currentColor"/><path d="M4 10l3-3 2 2 3-4"/></svg>
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor"/></svg>
+                                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2 14h12v-2H2v2zm0-4h12V8H2v2zm0-4h12V4H2v2z"/></svg>
+                            </div>
+                            
+                            <svg width="100%" height="100%" viewBox="0 0 500 360" preserveAspectRatio="none">
+                                <!-- Main Plot area background -->
+                                <rect x="50" y="20" width="430" height="230" fill="#0f172a" />
+                                
+                                <!-- Main Grid lines -->
+                                <g stroke="#1e293b" stroke-width="1">
+                                    <line x1="50" y1="60" x2="480" y2="60" />
+                                    <line x1="50" y1="100" x2="480" y2="100" />
+                                    <line x1="50" y1="140" x2="480" y2="140" />
+                                    <line x1="50" y1="180" x2="480" y2="180" />
+                                    <line x1="50" y1="220" x2="480" y2="220" />
+                                    <line x1="50" y1="250" x2="480" y2="250" stroke="#334155" />
+                                </g>
+                                
+                                <!-- Y Axis Labels -->
+                                <g fill="#94a3b8" font-size="10" font-family="Arial">
+                                    <text x="45" y="63" text-anchor="end">3200</text>
+                                    <text x="45" y="103" text-anchor="end">3000</text>
+                                    <text x="45" y="143" text-anchor="end">2800</text>
+                                    <text x="45" y="183" text-anchor="end">2600</text>
+                                    <text x="45" y="223" text-anchor="end">2400</text>
+                                </g>
+                                
+                                <!-- Support / Resistance -->
+                                <line x1="50" y1="60" x2="480" y2="60" stroke="#ef4444" stroke-dasharray="5,5" stroke-width="1.5" />
+                                <line x1="50" y1="220" x2="480" y2="220" stroke="#22c55e" stroke-dasharray="5,5" stroke-width="1.5" />
+
+                                <!-- Candlesticks -->
+                                <g stroke-width="1.5">
+                                    <line x1="80" y1="200" x2="80" y2="150" stroke="#22c55e" />
+                                    <rect x="75" y="160" width="10" height="30" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="120" y1="160" x2="120" y2="110" stroke="#22c55e" />
+                                    <rect x="115" y="120" width="10" height="30" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="160" y1="130" x2="160" y2="80" stroke="#ef4444" />
+                                    <rect x="155" y="90" width="10" height="30" fill="#ef4444" stroke="#ef4444" />
+                                    <line x1="200" y1="150" x2="200" y2="70" stroke="#22c55e" />
+                                    <rect x="195" y="80" width="10" height="60" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="240" y1="100" x2="240" y2="40" stroke="#22c55e" />
+                                    <rect x="235" y="50" width="10" height="40" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="280" y1="110" x2="280" y2="60" stroke="#ef4444" />
+                                    <rect x="275" y="70" width="10" height="30" fill="#ef4444" stroke="#ef4444" />
+                                    <line x1="320" y1="130" x2="320" y2="80" stroke="#ef4444" />
+                                    <rect x="315" y="90" width="10" height="30" fill="#ef4444" stroke="#ef4444" />
+                                    <line x1="360" y1="100" x2="360" y2="50" stroke="#22c55e" />
+                                    <rect x="355" y="60" width="10" height="30" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="400" y1="70" x2="400" y2="30" stroke="#22c55e" />
+                                    <rect x="395" y="40" width="10" height="20" fill="#22c55e" stroke="#22c55e" />
+                                    <line x1="440" y1="60" x2="440" y2="20" stroke="#ef4444" />
+                                    <rect x="435" y="25" width="10" height="25" fill="#ef4444" stroke="#ef4444" />
+                                </g>
+
+                                <!-- Moving Average Line -->
+                                <path d="M 80,180 Q 120,130 160,110 T 240,60 T 320,90 T 400,50 T 440,30" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+
+                                <!-- Volume Subplot Area -->
+                                <rect x="50" y="270" width="430" height="70" fill="#0f172a" />
+                                <line x1="50" y1="270" x2="480" y2="270" stroke="#334155" stroke-width="1" />
+                                <line x1="50" y1="340" x2="480" y2="340" stroke="#334155" stroke-width="1" />
+                                <!-- Volume Y Axis -->
+                                <g fill="#94a3b8" font-size="9" font-family="Arial">
+                                    <text x="45" y="280" text-anchor="end">10M</text>
+                                    <text x="45" y="335" text-anchor="end">0</text>
+                                </g>
+                                <!-- Volume Bars -->
+                                <g fill="#14b8a6" opacity="0.8">
+                                    <rect x="76" y="290" width="8" height="50" />
+                                    <rect x="116" y="280" width="8" height="60" />
+                                    <rect x="156" y="300" width="8" height="40" fill="#ef4444" />
+                                    <rect x="196" y="275" width="8" height="65" />
+                                    <rect x="236" y="285" width="8" height="55" />
+                                    <rect x="276" y="310" width="8" height="30" fill="#ef4444" />
+                                    <rect x="316" y="305" width="8" height="35" fill="#ef4444" />
+                                    <rect x="356" y="290" width="8" height="50" />
+                                    <rect x="396" y="300" width="8" height="40" />
+                                    <rect x="436" y="295" width="8" height="45" fill="#ef4444" />
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-10 mb-4" id="bottom-btn">
+                        <button id="new-analysis-btn" type="button" class="px-8 py-4 bg-green-600 text-white font-semibold rounded-lg shadow-lg text-lg transition-all hover:bg-green-700">
+                            Start New Analysis
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cursor lives inside camera now so it scales with the viewport! -->
+        <div id="video-cursor"></div>
+    </div>
+    
+    <!-- White fade overlay for perfectly smooth loop transitions -->
+    <div id="fade-overlay" style="position: absolute; top:0; left:0; width:100vw; height:100vh; background:white; z-index:10000; pointer-events:none; display:none;"></div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // Initialize GSAP Text Plugin
+    gsap.registerPlugin(TextPlugin);
+
+    // Main Timeline - loops infinitely
+    const tl = gsap.timeline({ repeat: -1 });
+
+    // Elements
+    const cursor = document.getElementById('video-cursor');
+    const camera = document.getElementById('camera');
+
+    // Genenrates a ripple effect exactly where the cursor is right now!
+    function clickEffect() {
+        // Read cursor's exact coordinates
+        const x = gsap.getProperty(cursor, "x");
+        const y = gsap.getProperty(cursor, "y");
+        
+        const ripple = document.createElement('div');
+        ripple.className = 'ripple';
+        ripple.style.left = (x - 12) + 'px';
+        ripple.style.top = (y - 12) + 'px';
+        
+        // Append to camera so it matches the cursor's coordinate space
+        document.getElementById('camera').appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+    }
+
+    // Helper to set cursor state
+    function setCursorPointer(isPointer) {
+        if(isPointer) {
+            cursor.classList.add('pointer');
+        } else {
+            cursor.classList.remove('pointer');
+        }
+    }
+
+    // Mathematically perfectly accurate coordinate system
+    // Gets the exact X/Y inside the camera container, factoring out any camera scaling!
+    function getLocalCenter(id) {
+        const el = document.getElementById(id);
+        if(!el) return {x: 0, y: 0};
+        
+        const scale = gsap.getProperty(camera, "scaleX") || 1;
+        const elRect = el.getBoundingClientRect();
+        const camRect = camera.getBoundingClientRect();
+        
+        return { 
+            x: (elRect.left - camRect.left + elRect.width / 2) / scale, 
+            y: (elRect.top - camRect.top + elRect.height / 2) / scale 
+        };
+    }
+
+    // --- INITIAL STATE AT TIME 0 ---
+    // Start with the white overlay visible to catch the loop from the end
+    tl.set('#fade-overlay', { display: 'block', opacity: 1 }, 0);
+    
+    tl.set('#amount-text', { text: "" }, 0);
+    tl.set('#time-text', { text: "" }, 0);
+    tl.set('#result-text', { text: "" }, 0);
+    tl.set('#amount-placeholder', { display: 'block' }, 0);
+    tl.set('#time-placeholder', { display: 'block' }, 0);
+    tl.set('#loading-overlay', { display: 'none', opacity: 0 }, 0);
+    tl.set('#result-section', { display: 'none', opacity: 0 }, 0);
+    tl.set('#form-section', { display: 'flex', opacity: 1 }, 0);
+    tl.set('#analyze-btn', { innerText: 'Analyze Stock', backgroundColor: '#2563eb', scale: 1 }, 0);
+    tl.set('#new-analysis-btn', { scale: 1 }, 0);
+    tl.set(camera, { scale: 1, y: 0 }, 0);
+    
+    // Cursor starts outside view
+    tl.set(cursor, { x: 1000, y: 800 }, 0);
+
+    // --- ANIMATION CHOREOGRAPHY ---
+
+    // 0. Smoothly fade out the white overlay to reveal the form
+    tl.to('#fade-overlay', { opacity: 0, duration: 0.6, ease: "power2.inOut" }, 0.2);
+    tl.set('#fade-overlay', { display: 'none' });
+
+    // 1. Brief pause at start
+    tl.to({}, { duration: 0.5 });
+
+    // 2. Camera zoom-in to the form container
+    tl.to(camera, { scale: 1.15, y: 50, duration: 2, ease: "power3.inOut" }, "start");
+
+    // 3. Move cursor smoothly to Amount Input (Offset left by 180px to click in the typing area)
+    tl.to(cursor, { 
+        x: () => getLocalCenter('input-amount-wrapper').x - 180, 
+        y: () => getLocalCenter('input-amount-wrapper').y, 
+        duration: 1.8, 
+        ease: "power2.inOut" 
+    }, "start+=0.8");
+
+    // 4. Click Amount Input
+    tl.call(() => setCursorPointer(true));
+    tl.to({}, { duration: 0.2 }); // small hover delay
+    tl.call(() => clickEffect());
+    tl.set('#amount-cursor', { display: 'inline-block' });
+    tl.to('#input-amount-wrapper', { borderColor: '#3b82f6', duration: 0.3 });
+    tl.set('#amount-placeholder', { display: 'none' });
+    tl.call(() => setCursorPointer(false));
+
+    // 5. Type Amount
+    tl.to('#amount-text', { text: "25000", duration: 1.2, ease: "none", delay: 0.6 });
+
+    // 6. Move cursor to Time Input (Offset left)
+    tl.set('#amount-cursor', { display: 'none', delay: 0.5 });
+    tl.to('#input-amount-wrapper', { borderColor: '#e5e7eb', duration: 0.3 });
+    tl.to(cursor, { 
+        x: () => getLocalCenter('input-time-wrapper').x - 180, 
+        y: () => getLocalCenter('input-time-wrapper').y, 
+        duration: 1.4, 
+        ease: "power2.inOut" 
+    });
+
+    // 7. Click Time Input
+    tl.call(() => setCursorPointer(true));
+    tl.to({}, { duration: 0.2 });
+    tl.call(() => clickEffect());
+    tl.set('#time-cursor', { display: 'inline-block' });
+    tl.to('#input-time-wrapper', { borderColor: '#3b82f6', duration: 0.3 });
+    tl.set('#time-placeholder', { display: 'none' });
+    tl.call(() => setCursorPointer(false));
+
+    // 8. Type Time
+    tl.to('#time-text', { text: "12", duration: 0.6, ease: "none", delay: 0.5 });
+
+    // 9. Move cursor to Analyze Button (Centered exactly)
+    tl.set('#time-cursor', { display: 'none', delay: 0.5 });
+    tl.to('#input-time-wrapper', { borderColor: '#e5e7eb', duration: 0.3 });
+    tl.to(cursor, { 
+        x: () => getLocalCenter('analyze-btn').x, 
+        y: () => getLocalCenter('analyze-btn').y, 
+        duration: 1.4, 
+        ease: "power2.inOut" 
+    });
+
+    // 10. Zoom out camera slightly for context before clicking
+    tl.to(camera, { scale: 1.02, y: 0, duration: 1.5, ease: "power2.inOut" }, "-=0.8");
+
+    // 11. Click Analyze Button
+    tl.call(() => setCursorPointer(true));
+    tl.to({}, { duration: 0.3 }); // Look at the button before clicking
+    tl.call(() => clickEffect());
+    tl.to('#analyze-btn', { scale: 0.96, duration: 0.15, yoyo: true, repeat: 1 });
+
+    // 12. Show Loading Overlay
+    tl.set('#loading-overlay', { display: 'flex' });
+    tl.to('#loading-overlay', { opacity: 1, duration: 0.4 });
+    tl.set('#analyze-btn', { innerText: 'Analyzing...', backgroundColor: '#1d4ed8' });
+    tl.call(() => setCursorPointer(false));
+
+    // 13. Move cursor away neutrally
+    tl.to(cursor, { x: 800, y: 600, duration: 2, ease: "power2.inOut" });
+
+    // 14. Simulate processing delay
+    tl.to({}, { duration: 2.5 });
+
+    // 15. Transition: Hide Form & Loading, Show Results
+    tl.to('#loading-overlay', { opacity: 0, duration: 0.4 });
+    tl.set('#loading-overlay', { display: 'none' });
+    tl.set('#form-section', { display: 'none' });
+    tl.set('#result-section', { display: 'block' });
+    tl.to('#result-section', { opacity: 1, duration: 0.8 });
+
+    // 16. Camera pan & zoom to the Verdict text
+    tl.to(camera, { scale: 1.18, y: -60, duration: 2, ease: "power3.inOut" }, "-=0.3");
+
+    // 17. Type out AI Verdict
+    const verdict = "VERDICT: STRONG BUY 🚀\n\nBased on your ₹25,000 capital and 12-month horizon, RELIANCE shows excellent risk-reward.\n\nKey Technicals:\n• Current Price: ₹2,950\n• 3-Month SMA crossed above Resistance\n• Support holding strong at ₹2,800\n\nAI recommends accumulation at current levels.";
+    tl.to('#result-text', { text: verdict, duration: 5, ease: "none" });
+
+    // 18. Move camera down to focus on the technical chart dynamically
+    tl.to(camera, { 
+        y: () => {
+            const uiHeight = document.getElementById('real-ui').offsetHeight;
+            // Added 250px extra to ensure we scroll completely past the button
+            return -(uiHeight - window.innerHeight + 250);
+        }, 
+        duration: 3.5, 
+        ease: "power2.inOut", 
+        delay: 2 
+    });
+
+    // 19. Just a single clean movement to the chart area (removed unnecessary hovering)
+    // Wait until camera is mostly done panning to move cursor
+    tl.to(cursor, { 
+        x: () => getLocalCenter('real-ui').x, 
+        y: () => getLocalCenter('real-ui').y + 200, 
+        duration: 2.0, 
+        ease: "power2.inOut" 
+    }, "-=1.5");
+    
+    // Hold over chart briefly
+    tl.to({}, { duration: 1.5 });
+
+    // 20. Move down to Start New Analysis Button!
+    tl.to(cursor, { 
+        x: () => getLocalCenter('new-analysis-btn').x, 
+        y: () => getLocalCenter('new-analysis-btn').y, 
+        duration: 1.5, 
+        ease: "power2.inOut",
+    });
+
+    // 21. Click the Start New Analysis button
+    tl.call(() => setCursorPointer(true));
+    tl.to({}, { duration: 0.3 }); // hover delay
+    tl.call(() => clickEffect());
+    tl.to('#new-analysis-btn', { scale: 0.95, duration: 0.15, yoyo: true, repeat: 1 });
+    
+    // 22. BOOM! Flash to solid white right before GSAP loops back to time 0
+    tl.call(() => setCursorPointer(false));
+    tl.set('#fade-overlay', { display: 'block' });
+    tl.to('#fade-overlay', { opacity: 1, duration: 0.15, delay: 0.2 });
+    
+    // Once it hits the end here, GSAP natively jumps back to Time 0.
+    // At Time 0, #fade-overlay is already defined as opacity 1! 
+    // Thus, no jitter occurs. It seamlessly blends the loops together.
+});
+</script>
+</body>
+</html>

@@ -8,6 +8,14 @@
 
 ---
 
+## 🎬 See It In Action
+
+<p align="center">
+  <video src="../assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
+</p>
+
+---
+
 ## 🚀 Overview
 
 **pAIsa** (p + AI + sa) is a web-based investment assistant that helps you make sense of the stock market. Unlike complex trading terminals, **pAIsa** focuses on simplicity and clear AI-driven insights tailored to your specific budget and time horizon.
