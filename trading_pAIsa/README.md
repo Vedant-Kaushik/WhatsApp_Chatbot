@@ -10,13 +10,11 @@
 
 ## 🎬 See It In Action
 
+> ⚠️ **Note for Safari Users:** Safari does not support WebM video playback. If the video below appears blank, please view this page in **Chrome, Edge, or Firefox**.
+
 <p align="center">
-  <video src="../assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
+  <!-- TODO: DRAG AND DROP YOUR paisa_video.webm FILE HERE USING THE GITHUB WEB EDITOR -->
 </p>
-<details>
-<summary><b>Video not playing? (Mac/Safari Users)</b></summary>
-Apple Safari does not support the WebM video format natively. If the video player above appears blank, please open this page in Chrome, Edge, or Firefox to view the demo!
-</details>
 
 ---
 
