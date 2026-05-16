@@ -191,9 +191,7 @@ A dedicated stock analysis dashboard that provides AI-powered insights for the I
 
 **[👉 Read the full pAIsa Documentation here](./trading_pAIsa/README.md)**
 
-<p align="center">
-  <video src="assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
-</p>
+![pAIsa Demo Video](assets/paisa_video.webm)
 
 **How it works:**
 1.  **Personalized Account**: Register to save your default investment budget and time horizon.

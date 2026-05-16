@@ -10,9 +10,7 @@
 
 ## 🎬 See It In Action
 
-<p align="center">
-  <video src="../assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
-</p>
+![pAIsa Demo Video](../assets/paisa_video.webm)
 
 ---
 
