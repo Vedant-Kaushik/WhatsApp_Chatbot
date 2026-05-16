@@ -10,7 +10,13 @@
 
 ## 🎬 See It In Action
 
-![pAIsa Demo Video](../assets/paisa_video.webm)
+<p align="center">
+  <video src="../assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
+</p>
+<details>
+<summary><b>Video not playing? (Mac/Safari Users)</b></summary>
+Apple Safari does not support the WebM video format natively. If the video player above appears blank, please open this page in Chrome, Edge, or Firefox to view the demo!
+</details>
 
 ---
 
