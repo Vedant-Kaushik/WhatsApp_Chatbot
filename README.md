@@ -195,7 +195,7 @@ A dedicated stock analysis dashboard that provides AI-powered insights for the I
 
 <p align="center">
     
-    [paisa_video.webm](https://github.com/user-attachments/assets/9fc9d7c8-2b1d-4456-b0a1-c82067372bf9)
+<video src="https://github.com/user-attachments/assets/9fc9d7c8-2b1d-4456-b0a1-c82067372bf9" width="100%" controls autoplay loop muted></video>
 </p>
 
 **How it works:**
