@@ -191,10 +191,7 @@ A dedicated stock analysis dashboard that provides AI-powered insights for the I
 
 **[👉 Read the full pAIsa Documentation here](./trading_pAIsa/README.md)**
 
-> ⚠️ **Note for Safari Users:** Safari does not support WebM video playback. If the video below appears blank, please view this page in **Chrome, Edge, or Firefox**.
-
 <p align="center">
-    
 <video src="https://github.com/user-attachments/assets/9fc9d7c8-2b1d-4456-b0a1-c82067372bf9" width="100%" controls autoplay loop muted></video>
 </p>
 
