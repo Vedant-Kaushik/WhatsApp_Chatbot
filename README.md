@@ -1,8 +1,8 @@
 ---
-title: Vedant upstox
-emoji: 🚀
+title: WhatsApp AI & pAIsa Trading
+emoji: 📈
 colorFrom: blue
-colorTo: indigo
+colorTo: green
 sdk: docker
 dockerfile: Dockerfile.upstox
 app_port: 8000
@@ -191,6 +191,10 @@ A dedicated stock analysis dashboard that provides AI-powered insights for the I
 
 **[👉 Read the full pAIsa Documentation here](./trading_pAIsa/README.md)**
 
+<p align="center">
+  <video src="assets/paisa_video.webm" width="100%" controls autoplay loop muted></video>
+</p>
+
 **How it works:**
 1.  **Personalized Account**: Register to save your default investment budget and time horizon.
 2.  **Smart Analysis**: Scans the **Nifty 50** and filters based on your budget and liquidity.
@@ -238,5 +242,6 @@ Resets the conversation memory for a specific user.
 1.  **Omnichannel Support**: Bringing the same intelligent experience to Telegram and other chat platforms.
 2.  **Cloud & Scalability**: Investigating cloud-native deployments with distributed queues for background task processing.
 3.  **Upstox WhatsApp Integration**: Bringing the investment analyst directly into WhatsApp conversations.
+4.  **Integrate Trader with Chatter**: Merge the automated Upstox trading system with the WhatsApp chatting interface, allowing trade execution directly via chat.
 
 ---
